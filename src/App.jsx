@@ -286,8 +286,21 @@ const locationPresets = [
 
 const levels = ['Todos', 'Federal', 'Estatal', 'Municipal', 'Judicial'];
 const offices = ['Todos los cargos', 'Gubernatura', 'Senaduria', 'Diputacion federal', 'Diputacion local', 'Presidencia municipal', 'Regiduria', 'Magistratura'];
-const topics = ['Todos', 'Seguridad', 'Economia', 'Salud', 'Movilidad', 'Derechos humanos', 'Agua', 'Transparencia'];
-const editableTopics = ['Seguridad', 'Economia', 'Salud', 'Movilidad', 'Derechos humanos', 'Agua', 'Transparencia', 'Educacion', 'Juventudes', 'Servicios publicos'];
+const publicationTopicOptions = [
+  'Sin tema',
+  'Economia',
+  'Salud',
+  'Educacion',
+  'Medio ambiente',
+  'Seguridad',
+  'Politica Social',
+  'Libertad Ciudadana',
+  'Comunidad Indigena',
+  'Poblacion LGBT',
+  'Politica externa',
+];
+const topics = ['Todos', ...publicationTopicOptions.filter((topic) => topic !== 'Sin tema')];
+const editableTopics = publicationTopicOptions.filter((topic) => topic !== 'Sin tema');
 
 function App() {
   const [politicians, setPoliticians] = useState(mockPoliticians);
@@ -1772,7 +1785,7 @@ function PoliticianAdminPanel({
     source: politician.source,
   });
   const [valuesDraft, setValuesDraft] = useState((politician.values ?? []).join(', '));
-  const [postDraft, setPostDraft] = useState({ title: '', body: '', type: 'Propuesta', tagsText: 'Salud', imageUrl: '' });
+  const [postDraft, setPostDraft] = useState({ title: '', body: '', type: 'Propuesta', topic: 'Salud', imageUrl: '' });
   const [savedMessage, setSavedMessage] = useState('');
 
   useEffect(() => {
@@ -1823,11 +1836,11 @@ function PoliticianAdminPanel({
       title: postDraft.title.trim(),
       body: postDraft.body.trim(),
       type: postDraft.type,
-      tags: parseTags(postDraft.tagsText),
+      tags: postDraft.topic === 'Sin tema' ? [] : [postDraft.topic],
       imageUrl: postDraft.imageUrl,
       createdAt: 'Ahora',
     });
-    setPostDraft({ title: '', body: '', type: 'Propuesta', tagsText: 'Salud', imageUrl: '' });
+    setPostDraft({ title: '', body: '', type: 'Propuesta', topic: 'Salud', imageUrl: '' });
     setSavedMessage('Publicacion agregada con tags.');
   };
 
@@ -1935,12 +1948,7 @@ function PoliticianAdminPanel({
             onChange={(event) => setPostDraft((draft) => ({ ...draft, body: event.target.value }))}
             placeholder="Escribe una propuesta, actualizacion o posicionamiento."
           />
-          <input
-            className="h-10 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
-            value={postDraft.tagsText}
-            onChange={(event) => setPostDraft((draft) => ({ ...draft, tagsText: event.target.value }))}
-            placeholder="Tags separados por coma: Salud, Vacunas, Infancia"
-          />
+          <TopicDropdown value={postDraft.topic} onChange={(topic) => setPostDraft((draft) => ({ ...draft, topic }))} />
           <div className="rounded-lg border border-ink/10 p-3">
             <p className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Imagen de la publicacion</p>
             {postDraft.imageUrl && (
@@ -2031,6 +2039,23 @@ function AdminInput({ label, value, onChange }) {
   );
 }
 
+function TopicDropdown({ value, onChange }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Tema de la publicacion</span>
+      <select
+        className="mt-2 h-10 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-black outline-none focus:border-civic"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {publicationTopicOptions.map((topic) => (
+          <option key={topic}>{topic}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function EditableProposal({ proposal, onSave, onDelete }) {
   const [draft, setDraft] = useState(proposal);
 
@@ -2067,15 +2092,15 @@ function EditableProposal({ proposal, onSave, onDelete }) {
 }
 
 function EditablePost({ post, onSave, onDelete }) {
-  const [draft, setDraft] = useState({ ...post, tagsText: (post.tags ?? []).join(', ') });
+  const [draft, setDraft] = useState({ ...post, topic: post.tags?.[0] ?? 'Sin tema' });
 
   useEffect(() => {
-    setDraft({ ...post, tagsText: (post.tags ?? []).join(', ') });
+    setDraft({ ...post, topic: post.tags?.[0] ?? 'Sin tema' });
   }, [post]);
 
   const saveDraft = () => {
-    const { tagsText, ...rest } = draft;
-    onSave({ ...rest, tags: parseTags(tagsText) });
+    const { topic, ...rest } = draft;
+    onSave({ ...rest, tags: topic === 'Sin tema' ? [] : [topic] });
   };
 
   const handleImageFile = (event) => {
@@ -2111,12 +2136,9 @@ function EditablePost({ post, onSave, onDelete }) {
         value={draft.body}
         onChange={(event) => setDraft((current) => ({ ...current, body: event.target.value }))}
       />
-      <input
-        className="mt-2 h-10 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
-        value={draft.tagsText}
-        onChange={(event) => setDraft((current) => ({ ...current, tagsText: event.target.value }))}
-        placeholder="Tags separados por coma"
-      />
+      <div className="mt-2">
+        <TopicDropdown value={draft.topic} onChange={(topic) => setDraft((current) => ({ ...current, topic }))} />
+      </div>
       <div className="mt-2 rounded-lg border border-ink/10 p-3">
         <p className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Imagen</p>
         {draft.imageUrl && <img className="mt-2 max-h-44 w-full rounded-md object-cover" src={draft.imageUrl} alt={draft.title} />}
