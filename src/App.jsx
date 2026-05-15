@@ -285,7 +285,7 @@ const locationPresets = [
 ];
 
 const levels = ['Todos', 'Federal', 'Estatal', 'Municipal', 'Judicial'];
-const offices = ['Todos los cargos', 'Senaduria', 'Diputacion federal', 'Diputacion local', 'Presidencia municipal', 'Regiduria', 'Magistratura'];
+const offices = ['Todos los cargos', 'Gubernatura', 'Senaduria', 'Diputacion federal', 'Diputacion local', 'Presidencia municipal', 'Regiduria', 'Magistratura'];
 const topics = ['Todos', 'Seguridad', 'Economia', 'Salud', 'Movilidad', 'Derechos humanos', 'Agua', 'Transparencia'];
 const editableTopics = ['Seguridad', 'Economia', 'Salud', 'Movilidad', 'Derechos humanos', 'Agua', 'Transparencia', 'Educacion', 'Juventudes', 'Servicios publicos'];
 
