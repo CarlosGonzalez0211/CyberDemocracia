@@ -1,0 +1,1609 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    table { border-collapse: collapse; font-family: Arial, sans-serif; }
+    th { background: #17202A; color: white; font-weight: bold; }
+    th, td { border: 1px solid #cccccc; padding: 6px 10px; mso-number-format:'\@'; }
+  </style>
+</head>
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th>ID oficial</th>
+        <th>Nombre</th>
+        <th>Municipio</th>
+        <th>Cargo</th>
+      </tr>
+    </thead>
+    <tbody>
+  <tr>
+    <td>MX-CHIH-AHUMADA-EST-0001</td>
+    <td>Alejandro Aguilar</td>
+    <td>Ahumada</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-AHUMADA-FED-0002</td>
+    <td>Carolina Baca</td>
+    <td>Ahumada</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-AHUMADA-JUD-0003</td>
+    <td>Diego Chavez</td>
+    <td>Ahumada</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-AHUMADA-MUN-0004</td>
+    <td>Elena Dominguez</td>
+    <td>Ahumada</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ALDAMA-EST-0005</td>
+    <td>Fernando Estrada</td>
+    <td>Aldama</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ALDAMA-FED-0006</td>
+    <td>Gabriela Flores</td>
+    <td>Aldama</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ALDAMA-JUD-0007</td>
+    <td>Javier Garcia</td>
+    <td>Aldama</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ALDAMA-MUN-0008</td>
+    <td>Lucia Herrera</td>
+    <td>Aldama</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ALLENDE-EST-0009</td>
+    <td>Marco Ibarra</td>
+    <td>Allende</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ALLENDE-FED-0010</td>
+    <td>Paola Jimenez</td>
+    <td>Allende</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ALLENDE-JUD-0011</td>
+    <td>Rafael Lopez</td>
+    <td>Allende</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ALLENDE-MUN-0012</td>
+    <td>Sofia Martinez</td>
+    <td>Allende</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-AQUILESSERDAN-EST-0013</td>
+    <td>Alejandro Navarro</td>
+    <td>Aquiles Serdan</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-AQUILESSERDAN-FED-0014</td>
+    <td>Carolina Ortega</td>
+    <td>Aquiles Serdan</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-AQUILESSERDAN-JUD-0015</td>
+    <td>Diego Paredes</td>
+    <td>Aquiles Serdan</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-AQUILESSERDAN-MUN-0016</td>
+    <td>Elena Quintana</td>
+    <td>Aquiles Serdan</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ASCENSION-EST-0017</td>
+    <td>Fernando Rivas</td>
+    <td>Ascension</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ASCENSION-FED-0018</td>
+    <td>Gabriela Salazar</td>
+    <td>Ascension</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ASCENSION-JUD-0019</td>
+    <td>Javier Torres</td>
+    <td>Ascension</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ASCENSION-MUN-0020</td>
+    <td>Lucia Valdez</td>
+    <td>Ascension</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BACHINIVA-EST-0021</td>
+    <td>Marco Aguilar</td>
+    <td>Bachiniva</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BACHINIVA-FED-0022</td>
+    <td>Paola Baca</td>
+    <td>Bachiniva</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BACHINIVA-JUD-0023</td>
+    <td>Rafael Chavez</td>
+    <td>Bachiniva</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BACHINIVA-MUN-0024</td>
+    <td>Sofia Dominguez</td>
+    <td>Bachiniva</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BALLEZA-EST-0025</td>
+    <td>Alejandro Estrada</td>
+    <td>Balleza</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BALLEZA-FED-0026</td>
+    <td>Carolina Flores</td>
+    <td>Balleza</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BALLEZA-JUD-0027</td>
+    <td>Diego Garcia</td>
+    <td>Balleza</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BALLEZA-MUN-0028</td>
+    <td>Elena Herrera</td>
+    <td>Balleza</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BATOPILASDEMANUELGOMEZMORIN-EST-0029</td>
+    <td>Fernando Ibarra</td>
+    <td>Batopilas de Manuel Gomez Morin</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BATOPILASDEMANUELGOMEZMORIN-FED-0030</td>
+    <td>Gabriela Jimenez</td>
+    <td>Batopilas de Manuel Gomez Morin</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BATOPILASDEMANUELGOMEZMORIN-JUD-0031</td>
+    <td>Javier Lopez</td>
+    <td>Batopilas de Manuel Gomez Morin</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BATOPILASDEMANUELGOMEZMORIN-MUN-0032</td>
+    <td>Lucia Martinez</td>
+    <td>Batopilas de Manuel Gomez Morin</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BOCOYNA-EST-0033</td>
+    <td>Marco Navarro</td>
+    <td>Bocoyna</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BOCOYNA-FED-0034</td>
+    <td>Paola Ortega</td>
+    <td>Bocoyna</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BOCOYNA-JUD-0035</td>
+    <td>Rafael Paredes</td>
+    <td>Bocoyna</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BOCOYNA-MUN-0036</td>
+    <td>Sofia Quintana</td>
+    <td>Bocoyna</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BUENAVENTURA-EST-0037</td>
+    <td>Alejandro Rivas</td>
+    <td>Buenaventura</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BUENAVENTURA-FED-0038</td>
+    <td>Carolina Salazar</td>
+    <td>Buenaventura</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BUENAVENTURA-JUD-0039</td>
+    <td>Diego Torres</td>
+    <td>Buenaventura</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-BUENAVENTURA-MUN-0040</td>
+    <td>Elena Valdez</td>
+    <td>Buenaventura</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CAMARGO-EST-0041</td>
+    <td>Fernando Aguilar</td>
+    <td>Camargo</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CAMARGO-FED-0042</td>
+    <td>Gabriela Baca</td>
+    <td>Camargo</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CAMARGO-JUD-0043</td>
+    <td>Javier Chavez</td>
+    <td>Camargo</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CAMARGO-MUN-0044</td>
+    <td>Lucia Dominguez</td>
+    <td>Camargo</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CARICHI-EST-0045</td>
+    <td>Marco Estrada</td>
+    <td>Carichi</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CARICHI-FED-0046</td>
+    <td>Paola Flores</td>
+    <td>Carichi</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CARICHI-JUD-0047</td>
+    <td>Rafael Garcia</td>
+    <td>Carichi</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CARICHI-MUN-0048</td>
+    <td>Sofia Herrera</td>
+    <td>Carichi</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CASASGRANDES-EST-0049</td>
+    <td>Alejandro Ibarra</td>
+    <td>Casas Grandes</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CASASGRANDES-FED-0050</td>
+    <td>Carolina Jimenez</td>
+    <td>Casas Grandes</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CASASGRANDES-JUD-0051</td>
+    <td>Diego Lopez</td>
+    <td>Casas Grandes</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CASASGRANDES-MUN-0052</td>
+    <td>Elena Martinez</td>
+    <td>Casas Grandes</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CHIHUAHUA-EST-0053</td>
+    <td>Fernando Navarro</td>
+    <td>Chihuahua</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CHIHUAHUA-FED-0054</td>
+    <td>Gabriela Ortega</td>
+    <td>Chihuahua</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CHIHUAHUA-JUD-0055</td>
+    <td>Javier Paredes</td>
+    <td>Chihuahua</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CHIHUAHUA-MUN-0056</td>
+    <td>Lucia Quintana</td>
+    <td>Chihuahua</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CHINIPAS-EST-0057</td>
+    <td>Marco Rivas</td>
+    <td>Chinipas</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CHINIPAS-FED-0058</td>
+    <td>Paola Salazar</td>
+    <td>Chinipas</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CHINIPAS-JUD-0059</td>
+    <td>Rafael Torres</td>
+    <td>Chinipas</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CHINIPAS-MUN-0060</td>
+    <td>Sofia Valdez</td>
+    <td>Chinipas</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CORONADO-EST-0061</td>
+    <td>Alejandro Aguilar</td>
+    <td>Coronado</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CORONADO-FED-0062</td>
+    <td>Carolina Baca</td>
+    <td>Coronado</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CORONADO-JUD-0063</td>
+    <td>Diego Chavez</td>
+    <td>Coronado</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CORONADO-MUN-0064</td>
+    <td>Elena Dominguez</td>
+    <td>Coronado</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-COYAMEDELSOTOL-EST-0065</td>
+    <td>Fernando Estrada</td>
+    <td>Coyame del Sotol</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-COYAMEDELSOTOL-FED-0066</td>
+    <td>Gabriela Flores</td>
+    <td>Coyame del Sotol</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-COYAMEDELSOTOL-JUD-0067</td>
+    <td>Javier Garcia</td>
+    <td>Coyame del Sotol</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-COYAMEDELSOTOL-MUN-0068</td>
+    <td>Lucia Herrera</td>
+    <td>Coyame del Sotol</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CUAUHTEMOC-EST-0069</td>
+    <td>Marco Ibarra</td>
+    <td>Cuauhtemoc</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CUAUHTEMOC-FED-0070</td>
+    <td>Paola Jimenez</td>
+    <td>Cuauhtemoc</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CUAUHTEMOC-JUD-0071</td>
+    <td>Rafael Lopez</td>
+    <td>Cuauhtemoc</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CUAUHTEMOC-MUN-0072</td>
+    <td>Sofia Martinez</td>
+    <td>Cuauhtemoc</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CUSIHUIRIACHI-EST-0073</td>
+    <td>Alejandro Navarro</td>
+    <td>Cusihuiriachi</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CUSIHUIRIACHI-FED-0074</td>
+    <td>Carolina Ortega</td>
+    <td>Cusihuiriachi</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CUSIHUIRIACHI-JUD-0075</td>
+    <td>Diego Paredes</td>
+    <td>Cusihuiriachi</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-CUSIHUIRIACHI-MUN-0076</td>
+    <td>Elena Quintana</td>
+    <td>Cusihuiriachi</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-DELICIAS-EST-0077</td>
+    <td>Fernando Rivas</td>
+    <td>Delicias</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-DELICIAS-FED-0078</td>
+    <td>Gabriela Salazar</td>
+    <td>Delicias</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-DELICIAS-JUD-0079</td>
+    <td>Javier Torres</td>
+    <td>Delicias</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-DELICIAS-MUN-0080</td>
+    <td>Lucia Valdez</td>
+    <td>Delicias</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-DRBELISARIODOMINGUEZ-EST-0081</td>
+    <td>Marco Aguilar</td>
+    <td>Dr. Belisario Dominguez</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-DRBELISARIODOMINGUEZ-FED-0082</td>
+    <td>Paola Baca</td>
+    <td>Dr. Belisario Dominguez</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-DRBELISARIODOMINGUEZ-JUD-0083</td>
+    <td>Rafael Chavez</td>
+    <td>Dr. Belisario Dominguez</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-DRBELISARIODOMINGUEZ-MUN-0084</td>
+    <td>Sofia Dominguez</td>
+    <td>Dr. Belisario Dominguez</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ELTULE-EST-0085</td>
+    <td>Alejandro Estrada</td>
+    <td>El Tule</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ELTULE-FED-0086</td>
+    <td>Carolina Flores</td>
+    <td>El Tule</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ELTULE-JUD-0087</td>
+    <td>Diego Garcia</td>
+    <td>El Tule</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ELTULE-MUN-0088</td>
+    <td>Elena Herrera</td>
+    <td>El Tule</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GALEANA-EST-0089</td>
+    <td>Fernando Ibarra</td>
+    <td>Galeana</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GALEANA-FED-0090</td>
+    <td>Gabriela Jimenez</td>
+    <td>Galeana</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GALEANA-JUD-0091</td>
+    <td>Javier Lopez</td>
+    <td>Galeana</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GALEANA-MUN-0092</td>
+    <td>Lucia Martinez</td>
+    <td>Galeana</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GOMEZFARIAS-EST-0093</td>
+    <td>Marco Navarro</td>
+    <td>Gomez Farias</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GOMEZFARIAS-FED-0094</td>
+    <td>Paola Ortega</td>
+    <td>Gomez Farias</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GOMEZFARIAS-JUD-0095</td>
+    <td>Rafael Paredes</td>
+    <td>Gomez Farias</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GOMEZFARIAS-MUN-0096</td>
+    <td>Sofia Quintana</td>
+    <td>Gomez Farias</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GRANMORELOS-EST-0097</td>
+    <td>Alejandro Rivas</td>
+    <td>Gran Morelos</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GRANMORELOS-FED-0098</td>
+    <td>Carolina Salazar</td>
+    <td>Gran Morelos</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GRANMORELOS-JUD-0099</td>
+    <td>Diego Torres</td>
+    <td>Gran Morelos</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GRANMORELOS-MUN-0100</td>
+    <td>Elena Valdez</td>
+    <td>Gran Morelos</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUACHOCHI-EST-0101</td>
+    <td>Fernando Aguilar</td>
+    <td>Guachochi</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUACHOCHI-FED-0102</td>
+    <td>Gabriela Baca</td>
+    <td>Guachochi</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUACHOCHI-JUD-0103</td>
+    <td>Javier Chavez</td>
+    <td>Guachochi</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUACHOCHI-MUN-0104</td>
+    <td>Lucia Dominguez</td>
+    <td>Guachochi</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUADALUPE-EST-0105</td>
+    <td>Marco Estrada</td>
+    <td>Guadalupe</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUADALUPE-FED-0106</td>
+    <td>Paola Flores</td>
+    <td>Guadalupe</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUADALUPE-JUD-0107</td>
+    <td>Rafael Garcia</td>
+    <td>Guadalupe</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUADALUPE-MUN-0108</td>
+    <td>Sofia Herrera</td>
+    <td>Guadalupe</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUADALUPEYCALVO-EST-0109</td>
+    <td>Alejandro Ibarra</td>
+    <td>Guadalupe y Calvo</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUADALUPEYCALVO-FED-0110</td>
+    <td>Carolina Jimenez</td>
+    <td>Guadalupe y Calvo</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUADALUPEYCALVO-JUD-0111</td>
+    <td>Diego Lopez</td>
+    <td>Guadalupe y Calvo</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUADALUPEYCALVO-MUN-0112</td>
+    <td>Elena Martinez</td>
+    <td>Guadalupe y Calvo</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUAZAPARES-EST-0113</td>
+    <td>Fernando Navarro</td>
+    <td>Guazapares</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUAZAPARES-FED-0114</td>
+    <td>Gabriela Ortega</td>
+    <td>Guazapares</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUAZAPARES-JUD-0115</td>
+    <td>Javier Paredes</td>
+    <td>Guazapares</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUAZAPARES-MUN-0116</td>
+    <td>Lucia Quintana</td>
+    <td>Guazapares</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUERRERO-EST-0117</td>
+    <td>Marco Rivas</td>
+    <td>Guerrero</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUERRERO-FED-0118</td>
+    <td>Paola Salazar</td>
+    <td>Guerrero</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUERRERO-JUD-0119</td>
+    <td>Rafael Torres</td>
+    <td>Guerrero</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-GUERRERO-MUN-0120</td>
+    <td>Sofia Valdez</td>
+    <td>Guerrero</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-HIDALGODELPARRAL-EST-0121</td>
+    <td>Alejandro Aguilar</td>
+    <td>Hidalgo del Parral</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-HIDALGODELPARRAL-FED-0122</td>
+    <td>Carolina Baca</td>
+    <td>Hidalgo del Parral</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-HIDALGODELPARRAL-JUD-0123</td>
+    <td>Diego Chavez</td>
+    <td>Hidalgo del Parral</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-HIDALGODELPARRAL-MUN-0124</td>
+    <td>Elena Dominguez</td>
+    <td>Hidalgo del Parral</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-HUEJOTITAN-EST-0125</td>
+    <td>Fernando Estrada</td>
+    <td>Huejotitan</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-HUEJOTITAN-FED-0126</td>
+    <td>Gabriela Flores</td>
+    <td>Huejotitan</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-HUEJOTITAN-JUD-0127</td>
+    <td>Javier Garcia</td>
+    <td>Huejotitan</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-HUEJOTITAN-MUN-0128</td>
+    <td>Lucia Herrera</td>
+    <td>Huejotitan</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-IGNACIOZARAGOZA-EST-0129</td>
+    <td>Marco Ibarra</td>
+    <td>Ignacio Zaragoza</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-IGNACIOZARAGOZA-FED-0130</td>
+    <td>Paola Jimenez</td>
+    <td>Ignacio Zaragoza</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-IGNACIOZARAGOZA-JUD-0131</td>
+    <td>Rafael Lopez</td>
+    <td>Ignacio Zaragoza</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-IGNACIOZARAGOZA-MUN-0132</td>
+    <td>Sofia Martinez</td>
+    <td>Ignacio Zaragoza</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JANOS-EST-0133</td>
+    <td>Alejandro Navarro</td>
+    <td>Janos</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JANOS-FED-0134</td>
+    <td>Carolina Ortega</td>
+    <td>Janos</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JANOS-JUD-0135</td>
+    <td>Diego Paredes</td>
+    <td>Janos</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JANOS-MUN-0136</td>
+    <td>Elena Quintana</td>
+    <td>Janos</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JIMENEZ-EST-0137</td>
+    <td>Fernando Rivas</td>
+    <td>Jimenez</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JIMENEZ-FED-0138</td>
+    <td>Gabriela Salazar</td>
+    <td>Jimenez</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JIMENEZ-JUD-0139</td>
+    <td>Javier Torres</td>
+    <td>Jimenez</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JIMENEZ-MUN-0140</td>
+    <td>Lucia Valdez</td>
+    <td>Jimenez</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JUAREZ-EST-0141</td>
+    <td>Marco Aguilar</td>
+    <td>Juarez</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JUAREZ-FED-0142</td>
+    <td>Paola Baca</td>
+    <td>Juarez</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JUAREZ-JUD-0143</td>
+    <td>Rafael Chavez</td>
+    <td>Juarez</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JUAREZ-MUN-0144</td>
+    <td>Sofia Dominguez</td>
+    <td>Juarez</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JULIMES-EST-0145</td>
+    <td>Alejandro Estrada</td>
+    <td>Julimes</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JULIMES-FED-0146</td>
+    <td>Carolina Flores</td>
+    <td>Julimes</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JULIMES-JUD-0147</td>
+    <td>Diego Garcia</td>
+    <td>Julimes</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-JULIMES-MUN-0148</td>
+    <td>Elena Herrera</td>
+    <td>Julimes</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-LOPEZ-EST-0149</td>
+    <td>Fernando Ibarra</td>
+    <td>Lopez</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-LOPEZ-FED-0150</td>
+    <td>Gabriela Jimenez</td>
+    <td>Lopez</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-LOPEZ-JUD-0151</td>
+    <td>Javier Lopez</td>
+    <td>Lopez</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-LOPEZ-MUN-0152</td>
+    <td>Lucia Martinez</td>
+    <td>Lopez</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MADERA-EST-0153</td>
+    <td>Marco Navarro</td>
+    <td>Madera</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MADERA-FED-0154</td>
+    <td>Paola Ortega</td>
+    <td>Madera</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MADERA-JUD-0155</td>
+    <td>Rafael Paredes</td>
+    <td>Madera</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MADERA-MUN-0156</td>
+    <td>Sofia Quintana</td>
+    <td>Madera</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MAGUARICHI-EST-0157</td>
+    <td>Alejandro Rivas</td>
+    <td>Maguarichi</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MAGUARICHI-FED-0158</td>
+    <td>Carolina Salazar</td>
+    <td>Maguarichi</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MAGUARICHI-JUD-0159</td>
+    <td>Diego Torres</td>
+    <td>Maguarichi</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MAGUARICHI-MUN-0160</td>
+    <td>Elena Valdez</td>
+    <td>Maguarichi</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MANUELBENAVIDES-EST-0161</td>
+    <td>Fernando Aguilar</td>
+    <td>Manuel Benavides</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MANUELBENAVIDES-FED-0162</td>
+    <td>Gabriela Baca</td>
+    <td>Manuel Benavides</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MANUELBENAVIDES-JUD-0163</td>
+    <td>Javier Chavez</td>
+    <td>Manuel Benavides</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MANUELBENAVIDES-MUN-0164</td>
+    <td>Lucia Dominguez</td>
+    <td>Manuel Benavides</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MATACHI-EST-0165</td>
+    <td>Marco Estrada</td>
+    <td>Matachi</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MATACHI-FED-0166</td>
+    <td>Paola Flores</td>
+    <td>Matachi</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MATACHI-JUD-0167</td>
+    <td>Rafael Garcia</td>
+    <td>Matachi</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MATACHI-MUN-0168</td>
+    <td>Sofia Herrera</td>
+    <td>Matachi</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MATAMOROS-EST-0169</td>
+    <td>Alejandro Ibarra</td>
+    <td>Matamoros</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MATAMOROS-FED-0170</td>
+    <td>Carolina Jimenez</td>
+    <td>Matamoros</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MATAMOROS-JUD-0171</td>
+    <td>Diego Lopez</td>
+    <td>Matamoros</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MATAMOROS-MUN-0172</td>
+    <td>Elena Martinez</td>
+    <td>Matamoros</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MEOQUI-EST-0173</td>
+    <td>Fernando Navarro</td>
+    <td>Meoqui</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MEOQUI-FED-0174</td>
+    <td>Gabriela Ortega</td>
+    <td>Meoqui</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MEOQUI-JUD-0175</td>
+    <td>Javier Paredes</td>
+    <td>Meoqui</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MEOQUI-MUN-0176</td>
+    <td>Lucia Quintana</td>
+    <td>Meoqui</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MORELOS-EST-0177</td>
+    <td>Marco Rivas</td>
+    <td>Morelos</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MORELOS-FED-0178</td>
+    <td>Paola Salazar</td>
+    <td>Morelos</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MORELOS-JUD-0179</td>
+    <td>Rafael Torres</td>
+    <td>Morelos</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MORELOS-MUN-0180</td>
+    <td>Sofia Valdez</td>
+    <td>Morelos</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MORIS-EST-0181</td>
+    <td>Alejandro Aguilar</td>
+    <td>Moris</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MORIS-FED-0182</td>
+    <td>Carolina Baca</td>
+    <td>Moris</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MORIS-JUD-0183</td>
+    <td>Diego Chavez</td>
+    <td>Moris</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-MORIS-MUN-0184</td>
+    <td>Elena Dominguez</td>
+    <td>Moris</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NAMIQUIPA-EST-0185</td>
+    <td>Fernando Estrada</td>
+    <td>Namiquipa</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NAMIQUIPA-FED-0186</td>
+    <td>Gabriela Flores</td>
+    <td>Namiquipa</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NAMIQUIPA-JUD-0187</td>
+    <td>Javier Garcia</td>
+    <td>Namiquipa</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NAMIQUIPA-MUN-0188</td>
+    <td>Lucia Herrera</td>
+    <td>Namiquipa</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NONOAVA-EST-0189</td>
+    <td>Marco Ibarra</td>
+    <td>Nonoava</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NONOAVA-FED-0190</td>
+    <td>Paola Jimenez</td>
+    <td>Nonoava</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NONOAVA-JUD-0191</td>
+    <td>Rafael Lopez</td>
+    <td>Nonoava</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NONOAVA-MUN-0192</td>
+    <td>Sofia Martinez</td>
+    <td>Nonoava</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NUEVOCASASGRANDES-EST-0193</td>
+    <td>Alejandro Navarro</td>
+    <td>Nuevo Casas Grandes</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NUEVOCASASGRANDES-FED-0194</td>
+    <td>Carolina Ortega</td>
+    <td>Nuevo Casas Grandes</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NUEVOCASASGRANDES-JUD-0195</td>
+    <td>Diego Paredes</td>
+    <td>Nuevo Casas Grandes</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-NUEVOCASASGRANDES-MUN-0196</td>
+    <td>Elena Quintana</td>
+    <td>Nuevo Casas Grandes</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-OCAMPO-EST-0197</td>
+    <td>Fernando Rivas</td>
+    <td>Ocampo</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-OCAMPO-FED-0198</td>
+    <td>Gabriela Salazar</td>
+    <td>Ocampo</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-OCAMPO-JUD-0199</td>
+    <td>Javier Torres</td>
+    <td>Ocampo</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-OCAMPO-MUN-0200</td>
+    <td>Lucia Valdez</td>
+    <td>Ocampo</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-OJINAGA-EST-0201</td>
+    <td>Marco Aguilar</td>
+    <td>Ojinaga</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-OJINAGA-FED-0202</td>
+    <td>Paola Baca</td>
+    <td>Ojinaga</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-OJINAGA-JUD-0203</td>
+    <td>Rafael Chavez</td>
+    <td>Ojinaga</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-OJINAGA-MUN-0204</td>
+    <td>Sofia Dominguez</td>
+    <td>Ojinaga</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-PRAXEDISGGUERRERO-EST-0205</td>
+    <td>Alejandro Estrada</td>
+    <td>Praxedis G. Guerrero</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-PRAXEDISGGUERRERO-FED-0206</td>
+    <td>Carolina Flores</td>
+    <td>Praxedis G. Guerrero</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-PRAXEDISGGUERRERO-JUD-0207</td>
+    <td>Diego Garcia</td>
+    <td>Praxedis G. Guerrero</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-PRAXEDISGGUERRERO-MUN-0208</td>
+    <td>Elena Herrera</td>
+    <td>Praxedis G. Guerrero</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-RIVAPALACIO-EST-0209</td>
+    <td>Fernando Ibarra</td>
+    <td>Riva Palacio</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-RIVAPALACIO-FED-0210</td>
+    <td>Gabriela Jimenez</td>
+    <td>Riva Palacio</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-RIVAPALACIO-JUD-0211</td>
+    <td>Javier Lopez</td>
+    <td>Riva Palacio</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-RIVAPALACIO-MUN-0212</td>
+    <td>Lucia Martinez</td>
+    <td>Riva Palacio</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ROSALES-EST-0213</td>
+    <td>Marco Navarro</td>
+    <td>Rosales</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ROSALES-FED-0214</td>
+    <td>Paola Ortega</td>
+    <td>Rosales</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ROSALES-JUD-0215</td>
+    <td>Rafael Paredes</td>
+    <td>Rosales</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ROSALES-MUN-0216</td>
+    <td>Sofia Quintana</td>
+    <td>Rosales</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ROSARIO-EST-0217</td>
+    <td>Alejandro Rivas</td>
+    <td>Rosario</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ROSARIO-FED-0218</td>
+    <td>Carolina Salazar</td>
+    <td>Rosario</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ROSARIO-JUD-0219</td>
+    <td>Diego Torres</td>
+    <td>Rosario</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-ROSARIO-MUN-0220</td>
+    <td>Elena Valdez</td>
+    <td>Rosario</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODEBORJA-EST-0221</td>
+    <td>Fernando Aguilar</td>
+    <td>San Francisco de Borja</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODEBORJA-FED-0222</td>
+    <td>Gabriela Baca</td>
+    <td>San Francisco de Borja</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODEBORJA-JUD-0223</td>
+    <td>Javier Chavez</td>
+    <td>San Francisco de Borja</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODEBORJA-MUN-0224</td>
+    <td>Lucia Dominguez</td>
+    <td>San Francisco de Borja</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODECONCHOS-EST-0225</td>
+    <td>Marco Estrada</td>
+    <td>San Francisco de Conchos</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODECONCHOS-FED-0226</td>
+    <td>Paola Flores</td>
+    <td>San Francisco de Conchos</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODECONCHOS-JUD-0227</td>
+    <td>Rafael Garcia</td>
+    <td>San Francisco de Conchos</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODECONCHOS-MUN-0228</td>
+    <td>Sofia Herrera</td>
+    <td>San Francisco de Conchos</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODELORO-EST-0229</td>
+    <td>Alejandro Ibarra</td>
+    <td>San Francisco del Oro</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODELORO-FED-0230</td>
+    <td>Carolina Jimenez</td>
+    <td>San Francisco del Oro</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODELORO-JUD-0231</td>
+    <td>Diego Lopez</td>
+    <td>San Francisco del Oro</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANFRANCISCODELORO-MUN-0232</td>
+    <td>Elena Martinez</td>
+    <td>San Francisco del Oro</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANTABARBARA-EST-0233</td>
+    <td>Fernando Navarro</td>
+    <td>Santa Barbara</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANTABARBARA-FED-0234</td>
+    <td>Gabriela Ortega</td>
+    <td>Santa Barbara</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANTABARBARA-JUD-0235</td>
+    <td>Javier Paredes</td>
+    <td>Santa Barbara</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANTABARBARA-MUN-0236</td>
+    <td>Lucia Quintana</td>
+    <td>Santa Barbara</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANTAISABEL-EST-0237</td>
+    <td>Marco Rivas</td>
+    <td>Santa Isabel</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANTAISABEL-FED-0238</td>
+    <td>Paola Salazar</td>
+    <td>Santa Isabel</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANTAISABEL-JUD-0239</td>
+    <td>Rafael Torres</td>
+    <td>Santa Isabel</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SANTAISABEL-MUN-0240</td>
+    <td>Sofia Valdez</td>
+    <td>Santa Isabel</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SATEVO-EST-0241</td>
+    <td>Alejandro Aguilar</td>
+    <td>Satevo</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SATEVO-FED-0242</td>
+    <td>Carolina Baca</td>
+    <td>Satevo</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SATEVO-JUD-0243</td>
+    <td>Diego Chavez</td>
+    <td>Satevo</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SATEVO-MUN-0244</td>
+    <td>Elena Dominguez</td>
+    <td>Satevo</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SAUCILLO-EST-0245</td>
+    <td>Fernando Estrada</td>
+    <td>Saucillo</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SAUCILLO-FED-0246</td>
+    <td>Gabriela Flores</td>
+    <td>Saucillo</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SAUCILLO-JUD-0247</td>
+    <td>Javier Garcia</td>
+    <td>Saucillo</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-SAUCILLO-MUN-0248</td>
+    <td>Lucia Herrera</td>
+    <td>Saucillo</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-TEMOSACHIC-EST-0249</td>
+    <td>Marco Ibarra</td>
+    <td>Temosachic</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-TEMOSACHIC-FED-0250</td>
+    <td>Paola Jimenez</td>
+    <td>Temosachic</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-TEMOSACHIC-JUD-0251</td>
+    <td>Rafael Lopez</td>
+    <td>Temosachic</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-TEMOSACHIC-MUN-0252</td>
+    <td>Sofia Martinez</td>
+    <td>Temosachic</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-URIQUE-EST-0253</td>
+    <td>Alejandro Navarro</td>
+    <td>Urique</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-URIQUE-FED-0254</td>
+    <td>Carolina Ortega</td>
+    <td>Urique</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-URIQUE-JUD-0255</td>
+    <td>Diego Paredes</td>
+    <td>Urique</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-URIQUE-MUN-0256</td>
+    <td>Elena Quintana</td>
+    <td>Urique</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-URUACHI-EST-0257</td>
+    <td>Fernando Rivas</td>
+    <td>Uruachi</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-URUACHI-FED-0258</td>
+    <td>Gabriela Salazar</td>
+    <td>Uruachi</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-URUACHI-JUD-0259</td>
+    <td>Javier Torres</td>
+    <td>Uruachi</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-URUACHI-MUN-0260</td>
+    <td>Lucia Valdez</td>
+    <td>Uruachi</td>
+    <td>Presidencia municipal</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-VALLEDEZARAGOZA-EST-0261</td>
+    <td>Marco Aguilar</td>
+    <td>Valle de Zaragoza</td>
+    <td>Diputacion local de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-VALLEDEZARAGOZA-FED-0262</td>
+    <td>Paola Baca</td>
+    <td>Valle de Zaragoza</td>
+    <td>Diputacion federal de mayoria relativa</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-VALLEDEZARAGOZA-JUD-0263</td>
+    <td>Rafael Chavez</td>
+    <td>Valle de Zaragoza</td>
+    <td>Persona juzgadora de Distrito</td>
+  </tr>
+  <tr>
+    <td>MX-CHIH-VALLEDEZARAGOZA-MUN-0264</td>
+    <td>Sofia Dominguez</td>
+    <td>Valle de Zaragoza</td>
+    <td>Presidencia municipal</td>
+  </tr>
+    </tbody>
+  </table>
+</body>
+</html>
