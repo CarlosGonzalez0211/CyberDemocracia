@@ -4,17 +4,21 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
-const port = process.env.API_PORT ?? 8787;
+const port = process.env.PORT ?? process.env.API_PORT ?? 8787;
 const geminiModel = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
 const ai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
 const supabase =
   process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY
     ? createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
     : null;
+const supabaseAdmin =
+  process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : null;
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
@@ -22,7 +26,18 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    service: 'cyberdemocracia-api',
+    supabase: Boolean(supabase),
+    supabaseAdmin: Boolean(supabaseAdmin),
+    gemini: Boolean(ai),
+    model: geminiModel,
+  });
+});
 
 app.post('/api/compare', async (req, res) => {
   if (!ai) {
@@ -86,6 +101,85 @@ app.post('/api/summarize-candidate', async (req, res) => {
       error: 'No se pudo generar el resumen neutral.',
       detail: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
+  }
+});
+
+app.post('/api/politicians/:politicianId/posts', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'El guardado de publicaciones no esta configurado en el servidor.' });
+    return;
+  }
+
+  const { politicianId } = req.params;
+  const { governmentPoliticianId, post } = req.body ?? {};
+
+  try {
+    await verifyPoliticianAccess(politicianId, governmentPoliticianId);
+    const savedPost = await createPoliticianPost(politicianId, post);
+    res.json({ post: savedPost });
+  } catch (error) {
+    console.error('Create post error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo guardar la publicacion.' });
+  }
+});
+
+app.put('/api/politicians/:politicianId/profile', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'La edicion de perfil no esta configurada en el servidor.' });
+    return;
+  }
+
+  const { politicianId } = req.params;
+  const { governmentPoliticianId, profile } = req.body ?? {};
+
+  try {
+    await verifyPoliticianAccess(politicianId, governmentPoliticianId);
+    const savedProfile = await updatePoliticianProfile(politicianId, profile);
+    res.json({ profile: savedProfile });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo actualizar el perfil.' });
+  }
+});
+
+app.put('/api/posts/:postId', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'La edicion de publicaciones no esta configurada en el servidor.' });
+    return;
+  }
+
+  const { postId } = req.params;
+  const { politicianId, governmentPoliticianId, post } = req.body ?? {};
+
+  try {
+    await verifyPoliticianAccess(politicianId, governmentPoliticianId);
+    await verifyPostOwner(postId, politicianId);
+    const savedPost = await updatePoliticianPost(postId, post);
+    res.json({ post: savedPost });
+  } catch (error) {
+    console.error('Update post error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo actualizar la publicacion.' });
+  }
+});
+
+app.delete('/api/posts/:postId', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'La eliminacion de publicaciones no esta configurada en el servidor.' });
+    return;
+  }
+
+  const { postId } = req.params;
+  const { politicianId, governmentPoliticianId } = req.body ?? {};
+
+  try {
+    await verifyPoliticianAccess(politicianId, governmentPoliticianId);
+    await verifyPostOwner(postId, politicianId);
+    const { error } = await supabaseAdmin.from('posts').delete().eq('id', postId);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo eliminar la publicacion.' });
   }
 });
 
@@ -402,6 +496,198 @@ Formato:
 2. Perfiles encontrados, si aplica.
 3. Que informacion falta verificar, si aplica.
 `;
+}
+
+async function verifyPoliticianAccess(politicianId, governmentPoliticianId) {
+  if (!politicianId || !governmentPoliticianId) {
+    throw publicError(400, 'Falta validar el perfil del candidato.');
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('politician_accounts')
+    .select('id, government_politician_id')
+    .eq('id', politicianId)
+    .eq('government_politician_id', governmentPoliticianId)
+    .single();
+
+  if (error || !data) {
+    throw publicError(403, 'No se pudo validar que esta publicacion pertenece a tu perfil.');
+  }
+
+  return data;
+}
+
+async function verifyPostOwner(postId, politicianId) {
+  if (!postId || !politicianId) {
+    throw publicError(400, 'Falta identificar la publicacion.');
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('posts')
+    .select('id')
+    .eq('id', postId)
+    .eq('politician_id', politicianId)
+    .single();
+
+  if (error || !data) {
+    throw publicError(404, 'No encontramos esa publicacion en tu perfil.');
+  }
+
+  return data;
+}
+
+async function updatePoliticianProfile(politicianId, profile) {
+  validateProfile(profile);
+
+  const updatePayload = {
+    display_name: profile.name.trim(),
+    bio: profile.profile?.trim() || null,
+    photo_url: profile.photoUrl || null,
+    official_source_url: profile.source?.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from('politician_accounts')
+    .update(updatePayload)
+    .eq('id', politicianId)
+    .select('display_name, bio, photo_url, official_source_url, updated_at')
+    .single();
+
+  if (error) throw error;
+
+  return {
+    name: data.display_name,
+    profile: data.bio ?? '',
+    photoUrl: data.photo_url ?? '',
+    source: data.official_source_url ?? '',
+    updatedAt: formatDate(data.updated_at),
+  };
+}
+
+async function createPoliticianPost(politicianId, post) {
+  validatePost(post);
+
+  const { data, error } = await supabaseAdmin
+    .from('posts')
+    .insert({
+      politician_id: politicianId,
+      title: post.title.trim(),
+      body: post.body.trim(),
+      post_type: post.type ?? 'Publicacion',
+      image_url: post.imageUrl || null,
+      status: 'published',
+      published_at: new Date().toISOString(),
+    })
+    .select('id, title, body, post_type, image_url, created_at')
+    .single();
+
+  if (error) throw error;
+
+  const tags = await replacePostTopics(data.id, post.tags ?? []);
+  return formatPost(data, tags);
+}
+
+async function updatePoliticianPost(postId, post) {
+  validatePost(post);
+
+  const { data, error } = await supabaseAdmin
+    .from('posts')
+    .update({
+      title: post.title.trim(),
+      body: post.body.trim(),
+      post_type: post.type ?? 'Publicacion',
+      image_url: post.imageUrl || null,
+      status: 'published',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', postId)
+    .select('id, title, body, post_type, image_url, created_at')
+    .single();
+
+  if (error) throw error;
+
+  const tags = await replacePostTopics(data.id, post.tags ?? []);
+  return formatPost(data, tags);
+}
+
+async function replacePostTopics(postId, tags) {
+  const cleanTags = Array.from(new Set((tags ?? []).map((tag) => String(tag).trim()).filter(Boolean)));
+
+  const { error: deleteError } = await supabaseAdmin.from('post_topics').delete().eq('post_id', postId);
+  if (deleteError) throw deleteError;
+
+  if (!cleanTags.length) return [];
+
+  const topics = [];
+  for (const tag of cleanTags) {
+    topics.push(await ensureTopic(tag));
+  }
+
+  const { error: insertError } = await supabaseAdmin.from('post_topics').insert(
+    topics.map((topic) => ({
+      post_id: postId,
+      topic_id: topic.id,
+    })),
+  );
+  if (insertError) throw insertError;
+
+  return topics.map((topic) => topic.name);
+}
+
+async function ensureTopic(name) {
+  const slug = slugify(name);
+  const { data: existing, error: readError } = await supabaseAdmin.from('topics').select('id, name').eq('slug', slug).maybeSingle();
+  if (readError) throw readError;
+  if (existing) return existing;
+
+  const { data, error } = await supabaseAdmin.from('topics').insert({ name, slug }).select('id, name').single();
+  if (error) throw error;
+  return data;
+}
+
+function validatePost(post) {
+  if (!post?.title?.trim() || !post?.body?.trim()) {
+    throw publicError(400, 'La publicacion necesita titulo y contenido.');
+  }
+}
+
+function validateProfile(profile) {
+  if (!profile?.name?.trim()) {
+    throw publicError(400, 'El perfil necesita un nombre publico.');
+  }
+}
+
+function formatPost(post, tags) {
+  return {
+    id: post.id,
+    title: post.title,
+    body: post.body,
+    type: post.post_type,
+    tags,
+    imageUrl: post.image_url ?? '',
+    createdAt: formatDate(post.created_at),
+  };
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
+}
+
+function publicError(statusCode, publicMessage) {
+  const error = new Error(publicMessage);
+  error.statusCode = statusCode;
+  error.publicMessage = publicMessage;
+  return error;
+}
+
+function slugify(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 function buildDatabaseFallbackAnswer(message, profiles, quotaLimited = false) {

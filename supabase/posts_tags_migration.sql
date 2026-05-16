@@ -96,6 +96,7 @@ select
   coalesce(el.federal_district, 'No aplica') as federal_district,
   coalesce(el.local_district, 'No aplica') as local_district,
   coalesce(pa.bio, '') as profile,
+  coalesce(pa.photo_url, '') as photo_url,
   coalesce(pa.official_source_url, '') as source,
   to_char(pa.updated_at, 'DD Mon YYYY') as updated_at,
   coalesce(
@@ -115,18 +116,21 @@ select
     (
       select jsonb_agg(
         jsonb_build_object(
+          'id', latest_posts.id,
           'title', latest_posts.title,
           'body', latest_posts.body,
           'type', latest_posts.post_type,
           'tags', latest_posts.tags,
           'imageUrl', latest_posts.image_url,
-          'createdAt', to_char(latest_posts.created_at, 'DD Mon YYYY')
+          'createdAt', to_char(latest_posts.created_at, 'DD Mon YYYY'),
+          'createdAtIso', latest_posts.created_at
         )
         order by latest_posts.created_at desc
       )
       from (
         select
           posts.title,
+          posts.id,
           posts.body,
           posts.post_type,
           posts.image_url,
@@ -139,7 +143,6 @@ select
           and posts.status = 'published'
         group by posts.id
         order by posts.created_at desc
-        limit 5
       ) latest_posts
     ),
     '[]'::jsonb

@@ -403,12 +403,35 @@ function App() {
         politician.localDistrict === 'Circuito judicial estatal';
       const levelMatches = level === 'Todos' || politician.level === level;
       const officeMatches = office === 'Todos los cargos' || politician.office === office;
-      const topicMatches = topic === 'Todos' || politician.topics.includes(topic);
+      const postTopics = (politician.posts ?? []).flatMap((post) => post.tags ?? []);
+      const topicMatches = topic === 'Todos' || politician.topics.includes(topic) || postTopics.includes(topic);
       const searchMatches = !normalizedSearch || getSearchText(politician, searchScope).includes(normalizedSearch);
 
       return sameState && sameMunicipality && sameFederalDistrict && sameLocalDistrict && levelMatches && officeMatches && topicMatches && searchMatches;
     });
   }, [location, level, office, topic, politicians, searchQuery, searchScope]);
+
+  const visibleFeedPosts = useMemo(() => {
+    return visiblePoliticians.flatMap((politician) => {
+      const posts = topic === 'Todos'
+        ? politician.posts ?? []
+        : (politician.posts ?? []).filter((post) => (post.tags ?? []).includes(topic));
+
+      if (!posts.length) {
+        return [{
+          politician,
+          post: null,
+          key: `${politician.id}-perfil`,
+        }];
+      }
+
+      return posts.map((post, index) => ({
+        politician,
+        post,
+        key: post.id || `${politician.id}-post-${index}`,
+      }));
+    }).sort((a, b) => getPostTime(b.post, b.politician) - getPostTime(a.post, a.politician));
+  }, [topic, visiblePoliticians]);
 
   const activePolitician = politicians.find((politician) => politician.id === activeId) ?? visiblePoliticians[0] ?? politicians[0];
   const selectedPoliticians = politicians.filter((politician) => selectedIds.includes(politician.id));
@@ -489,18 +512,32 @@ function App() {
     setLoginError('');
   };
 
-  const updatePoliticianProfile = (id, updates) => {
+  const updatePoliticianProfile = async (id, updates) => {
+    const politician = politicians.find((item) => item.id === id);
+    const response = await fetchWithTimeout(getApiUrl(`/api/politicians/${id}/profile`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        governmentPoliticianId: politician?.governmentId,
+        profile: updates,
+      }),
+    });
+    const payload = await parseApiPayload(response);
+    if (!payload.profile) throw new Error('El servidor no regreso el perfil actualizado.');
+    const savedProfile = payload.profile;
+
     setPoliticians((current) =>
       current.map((politician) =>
         politician.id === id
           ? {
               ...politician,
-              ...updates,
-              updatedAt: 'Actualizado ahora',
+              ...savedProfile,
             }
           : politician,
       ),
     );
+
+    return savedProfile;
   };
 
   const addPoliticianProposal = (id, proposal) => {
@@ -518,19 +555,33 @@ function App() {
     );
   };
 
-  const addPoliticianPost = (id, post) => {
+  const addPoliticianPost = async (id, post) => {
+    const politician = politicians.find((item) => item.id === id);
+    const response = await fetchWithTimeout(getApiUrl(`/api/politicians/${id}/posts`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        governmentPoliticianId: politician?.governmentId,
+        post,
+      }),
+    });
+    const payload = await parseApiPayload(response);
+    if (!payload.post) throw new Error('El servidor no regreso la publicacion guardada.');
+    const savedPost = payload.post;
+
     setPoliticians((current) =>
       current.map((politician) =>
         politician.id === id
           ? {
               ...politician,
-              topics: Array.from(new Set([...politician.topics, ...(post.tags ?? [])])),
-              posts: [post, ...(politician.posts ?? [])],
+              topics: Array.from(new Set([...politician.topics, ...(savedPost.tags ?? [])])),
+              posts: [savedPost, ...(politician.posts ?? [])],
               updatedAt: 'Actualizado ahora',
             }
           : politician,
       ),
     );
+    return savedPost;
   };
 
   const updatePoliticianValues = (id, values) => {
@@ -576,22 +627,54 @@ function App() {
     );
   };
 
-  const updatePoliticianPost = (id, postIndex, post) => {
+  const updatePoliticianPost = async (id, postIndex, post) => {
+    const politician = politicians.find((item) => item.id === id);
+    const currentPost = politician?.posts?.[postIndex];
+    if (!currentPost?.id) throw new Error('Esta publicacion todavia no tiene ID de base de datos.');
+
+    const response = await fetchWithTimeout(getApiUrl(`/api/posts/${currentPost.id}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        politicianId: id,
+        governmentPoliticianId: politician?.governmentId,
+        post,
+      }),
+    });
+    const payload = await parseApiPayload(response);
+    if (!payload.post) throw new Error('El servidor no regreso la publicacion actualizada.');
+    const savedPost = payload.post;
+
     setPoliticians((current) =>
       current.map((politician) =>
         politician.id === id
           ? {
               ...politician,
-              posts: (politician.posts ?? []).map((item, index) => (index === postIndex ? { ...item, ...post } : item)),
-              topics: Array.from(new Set([...(politician.topics ?? []), ...(post.tags ?? [])])),
+              posts: (politician.posts ?? []).map((item, index) => (index === postIndex ? savedPost : item)),
+              topics: Array.from(new Set([...(politician.topics ?? []), ...(savedPost.tags ?? [])])),
               updatedAt: 'Actualizado ahora',
             }
           : politician,
       ),
     );
+    return savedPost;
   };
 
-  const deletePoliticianPost = (id, postIndex) => {
+  const deletePoliticianPost = async (id, postIndex) => {
+    const politician = politicians.find((item) => item.id === id);
+    const currentPost = politician?.posts?.[postIndex];
+    if (!currentPost?.id) throw new Error('Esta publicacion todavia no tiene ID de base de datos.');
+
+    const response = await fetchWithTimeout(getApiUrl(`/api/posts/${currentPost.id}`), {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        politicianId: id,
+        governmentPoliticianId: politician?.governmentId,
+      }),
+    });
+    await parseApiPayload(response);
+
     setPoliticians((current) =>
       current.map((politician) =>
         politician.id === id
@@ -709,7 +792,7 @@ function App() {
             <>
               <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchScope={searchScope} setSearchScope={setSearchScope} />
               <FeedHeader
-                count={visiblePoliticians.length}
+                count={visibleFeedPosts.length}
                 location={location}
                 level={level}
                 office={office}
@@ -718,10 +801,11 @@ function App() {
                 searchScope={searchScope}
               />
               <div className="space-y-4">
-                {visiblePoliticians.map((politician) => (
+                {visibleFeedPosts.map(({ politician, post, key }) => (
                   <PoliticianPost
-                    key={politician.id}
+                    key={key}
                     politician={politician}
+                    post={post}
                     selected={selectedIds.includes(politician.id)}
                     active={activePolitician.id === politician.id}
                     onOpen={() => {
@@ -730,7 +814,7 @@ function App() {
                     }}
                   />
                 ))}
-                {visiblePoliticians.length === 0 && <EmptyState onReset={resetFeedFilters} />}
+                {visibleFeedPosts.length === 0 && <EmptyState onReset={resetFeedFilters} />}
               </div>
             </>
           ) : (
@@ -1271,8 +1355,8 @@ function FeedHeader({ count, location, level, office, topic, searchQuery, search
   );
 }
 
-function PoliticianPost({ politician, active, onOpen }) {
-  const latestPost = politician.posts?.[0];
+function PoliticianPost({ politician, post, active, onOpen }) {
+  const latestPost = post ?? politician.posts?.[0];
   const visibleTags = latestPost?.tags?.length ? latestPost.tags : politician.topics;
   const postTitle = latestPost?.title ?? 'Resumen del perfil';
   const postBody = latestPost?.body || politician.profile;
@@ -1341,7 +1425,7 @@ function PoliticianPost({ politician, active, onOpen }) {
       <ShareActions
         className="mt-3"
         politicianId={politician.id}
-        contentId={latestPost ? 'publicacion-reciente' : 'perfil'}
+        contentId={latestPost?.id || (latestPost ? 'publicacion' : 'perfil')}
         title={`${postTitle} - ${politician.name}`}
         text={`${postBody}\n\n${politician.name} | ${politician.office} | ${politician.party}`}
       />
@@ -1787,6 +1871,24 @@ function PoliticianAdminPanel({
   const [valuesDraft, setValuesDraft] = useState((politician.values ?? []).join(', '));
   const [postDraft, setPostDraft] = useState({ title: '', body: '', type: 'Propuesta', topic: 'Salud', imageUrl: '' });
   const [savedMessage, setSavedMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
+  const [photoMessage, setPhotoMessage] = useState('');
+  const [photoMessageType, setPhotoMessageType] = useState('success');
+  const [postMessage, setPostMessage] = useState('');
+  const [postMessageType, setPostMessageType] = useState('success');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
+  const [isSavingPost, setIsSavingPost] = useState(false);
+
+  const showSuccess = (message) => {
+    setMessageType('success');
+    setSavedMessage(message);
+  };
+
+  const showError = (message) => {
+    setMessageType('error');
+    setSavedMessage(message);
+  };
 
   useEffect(() => {
     setProfileDraft({
@@ -1798,12 +1900,24 @@ function PoliticianAdminPanel({
     });
     setValuesDraft((politician.values ?? []).join(', '));
     setSavedMessage('');
+    setMessageType('success');
+    setPhotoMessage('');
+    setPhotoMessageType('success');
+    setPostMessage('');
+    setPostMessageType('success');
   }, [politician.id]);
 
   const saveProfile = (event) => {
     event.preventDefault();
-    onUpdateProfile(profileDraft);
-    setSavedMessage('Perfil actualizado en esta sesion.');
+    setIsSavingProfile(true);
+    showSuccess('Guardando perfil...');
+    Promise.resolve(onUpdateProfile(profileDraft))
+      .then((savedProfile) => {
+        setProfileDraft((draft) => ({ ...draft, ...savedProfile }));
+        showSuccess('Perfil actualizado correctamente.');
+      })
+      .catch((error) => showError(error.message))
+      .finally(() => setIsSavingProfile(false));
   };
 
   const saveValues = (event) => {
@@ -1813,18 +1927,48 @@ function PoliticianAdminPanel({
       .map((value) => value.trim())
       .filter(Boolean);
     onUpdateValues(values);
-    setSavedMessage('Valores actualizados.');
+    showSuccess('Valores actualizados correctamente.');
+  };
+
+  const saveProfilePhoto = () => {
+    setIsSavingPhoto(true);
+    setPhotoMessageType('success');
+    setPhotoMessage('Guardando foto en la base de datos...');
+    Promise.resolve(onUpdateProfile(profileDraft))
+      .then((savedProfile) => {
+        setProfileDraft((draft) => ({ ...draft, ...savedProfile }));
+        setPhotoMessageType('success');
+        setPhotoMessage('Foto actualizada correctamente.');
+        showSuccess('Foto actualizada correctamente.');
+      })
+      .catch((error) => {
+        setPhotoMessageType('error');
+        setPhotoMessage(error.message);
+        showError(error.message);
+      })
+      .finally(() => setIsSavingPhoto(false));
   };
 
   const handlePhotoFile = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoMessageType('error');
+      setPhotoMessage('La foto pesa mas de 5 MB. Usa una imagen mas ligera.');
+      event.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
-      setProfileDraft((draft) => ({ ...draft, photoUrl: reader.result }));
-      onUpdateProfile({ ...profileDraft, photoUrl: reader.result });
-      setSavedMessage('Foto actualizada en esta sesion.');
+      const nextProfile = { ...profileDraft, photoUrl: reader.result };
+      setProfileDraft(nextProfile);
+      setPhotoMessageType('success');
+      setPhotoMessage('Foto lista. Presiona "Guardar foto" para actualizarla en la base de datos.');
+    };
+    reader.onerror = () => {
+      setPhotoMessageType('error');
+      setPhotoMessage('No se pudo leer la foto seleccionada.');
     };
     reader.readAsDataURL(file);
   };
@@ -1832,25 +1976,52 @@ function PoliticianAdminPanel({
   const savePost = (event) => {
     event.preventDefault();
     if (!postDraft.title.trim() || !postDraft.body.trim()) return;
-    onAddPost({
+    setIsSavingPost(true);
+    setPostMessageType('success');
+    setPostMessage('Guardando publicacion en la base de datos...');
+    const nextPost = {
       title: postDraft.title.trim(),
       body: postDraft.body.trim(),
       type: postDraft.type,
       tags: postDraft.topic === 'Sin tema' ? [] : [postDraft.topic],
       imageUrl: postDraft.imageUrl,
       createdAt: 'Ahora',
-    });
-    setPostDraft({ title: '', body: '', type: 'Propuesta', topic: 'Salud', imageUrl: '' });
-    setSavedMessage('Publicacion agregada con tags.');
+    };
+
+    Promise.resolve(onAddPost(nextPost))
+      .then(() => {
+        setPostDraft({ title: '', body: '', type: 'Propuesta', topic: 'Salud', imageUrl: '' });
+        setPostMessageType('success');
+        setPostMessage('Publicacion guardada correctamente.');
+        showSuccess('Publicacion guardada correctamente.');
+      })
+      .catch((error) => {
+        setPostMessageType('error');
+        setPostMessage(error.message);
+        showError(error.message);
+      })
+      .finally(() => setIsSavingPost(false));
   };
 
   const handlePostImageFile = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setPostMessageType('error');
+      setPostMessage('La imagen pesa mas de 5 MB. Usa una imagen mas ligera.');
+      event.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
       setPostDraft((draft) => ({ ...draft, imageUrl: reader.result }));
+      setPostMessageType('success');
+      setPostMessage('Imagen lista. Publica o guarda la publicacion para subirla a la base de datos.');
+    };
+    reader.onerror = () => {
+      setPostMessageType('error');
+      setPostMessage('No se pudo leer la imagen seleccionada.');
     };
     reader.readAsDataURL(file);
   };
@@ -1892,6 +2063,19 @@ function PoliticianAdminPanel({
           <div className="mt-3">
             <AdminInput label="O pega una URL de foto" value={profileDraft.photoUrl} onChange={(value) => setProfileDraft((draft) => ({ ...draft, photoUrl: value }))} />
           </div>
+          <button
+            type="button"
+            onClick={saveProfilePhoto}
+            disabled={isSavingPhoto}
+            className="mt-3 h-10 w-full rounded-md bg-civic text-sm font-black text-white transition hover:bg-civic/90 disabled:cursor-wait disabled:opacity-60"
+          >
+            {isSavingPhoto ? 'Guardando foto...' : 'Guardar foto'}
+          </button>
+          {photoMessage && (
+            <p className={`mt-3 rounded-md p-3 text-sm font-black ${photoMessageType === 'error' ? 'bg-signal/10 text-signal' : 'bg-civic/10 text-civic'}`}>
+              {photoMessage}
+            </p>
+          )}
         </div>
         <AdminInput label="Fuente oficial" value={profileDraft.source} onChange={(value) => setProfileDraft((draft) => ({ ...draft, source: value }))} />
         <label className="block">
@@ -1902,8 +2086,8 @@ function PoliticianAdminPanel({
             onChange={(event) => setProfileDraft((draft) => ({ ...draft, profile: event.target.value }))}
           />
         </label>
-        <button className="h-10 w-full rounded-md bg-ink text-sm font-black text-white hover:bg-ink/90">
-          Guardar perfil
+        <button disabled={isSavingProfile} className="h-10 w-full rounded-md bg-ink text-sm font-black text-white hover:bg-ink/90 disabled:cursor-wait disabled:opacity-60">
+          {isSavingProfile ? 'Guardando perfil...' : 'Guardar perfil'}
         </button>
       </form>
 
@@ -1974,8 +2158,13 @@ function PoliticianAdminPanel({
             />
           </div>
         </div>
-        <button className="mt-3 h-10 w-full rounded-md bg-civic text-sm font-black text-white hover:bg-civic/90">
-          Publicar
+        {postMessage && (
+          <p className={`mt-3 rounded-md p-3 text-sm font-black ${postMessageType === 'error' ? 'bg-signal/10 text-signal' : 'bg-civic/10 text-civic'}`}>
+            {postMessage}
+          </p>
+        )}
+        <button disabled={isSavingPost} className="mt-3 h-10 w-full rounded-md bg-civic text-sm font-black text-white hover:bg-civic/90 disabled:cursor-wait disabled:opacity-60">
+          {isSavingPost ? 'Publicando...' : 'Publicar'}
         </button>
       </form>
 
@@ -1989,11 +2178,11 @@ function PoliticianAdminPanel({
               proposal={proposal}
               onSave={(nextProposal) => {
                 onUpdateProposal(index, nextProposal);
-                setSavedMessage('Propuesta actualizada.');
+                showSuccess('Propuesta actualizada correctamente.');
               }}
               onDelete={() => {
                 onDeleteProposal(index);
-                setSavedMessage('Propuesta eliminada.');
+                showSuccess('Propuesta eliminada correctamente.');
               }}
             />
           ))}
@@ -2009,19 +2198,25 @@ function PoliticianAdminPanel({
               key={`${politician.id}-editable-post-${index}`}
               post={post}
               onSave={(nextPost) => {
-                onUpdatePost(index, nextPost);
-                setSavedMessage('Publicacion actualizada.');
+                Promise.resolve(onUpdatePost(index, nextPost))
+                  .then(() => showSuccess('Publicacion actualizada correctamente.'))
+                  .catch((error) => showError(error.message));
               }}
               onDelete={() => {
-                onDeletePost(index);
-                setSavedMessage('Publicacion eliminada.');
+                Promise.resolve(onDeletePost(index))
+                  .then(() => showSuccess('Publicacion eliminada correctamente.'))
+                  .catch((error) => showError(error.message));
               }}
             />
           ))}
         </div>
       </div>
 
-      {savedMessage && <p className="mt-4 rounded-md bg-civic/10 p-3 text-sm font-black text-civic">{savedMessage}</p>}
+      {savedMessage && (
+        <p className={`mt-4 rounded-md p-3 text-sm font-black ${messageType === 'error' ? 'bg-signal/10 text-signal' : 'bg-civic/10 text-civic'}`}>
+          {savedMessage}
+        </p>
+      )}
     </section>
   );
 }
@@ -2462,17 +2657,20 @@ function mapSupabasePolitician(row) {
     localDistrict: row.local_district ?? 'No aplica',
     topics,
     profile: row.profile || 'Este perfil politico todavia no tiene una biografia publicada.',
+    photoUrl: row.photo_url ?? '',
     proposals: proposals.map((proposal) => ({
       topic: proposal.topic ?? 'General',
       text: proposal.text ?? '',
     })),
     posts: posts.map((post) => ({
+      id: post.id ?? '',
       title: post.title ?? 'Publicacion',
       body: post.body ?? '',
       type: post.type ?? 'Publicacion',
       tags: Array.isArray(post.tags) ? post.tags : [],
       imageUrl: post.imageUrl ?? '',
       createdAt: post.createdAt ?? '',
+      createdAtIso: post.createdAtIso ?? '',
     })),
     source: row.source || 'Fuente oficial pendiente',
     updatedAt: row.updated_at ?? 'Sin fecha',
@@ -2487,6 +2685,12 @@ function normalizeText(value) {
     .trim();
 }
 
+function getPostTime(post, politician) {
+  const value = post?.createdAtIso || post?.createdAt || politician?.updatedAt;
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
 function parseTags(value) {
   return Array.from(
     new Set(
@@ -2496,6 +2700,59 @@ function parseTags(value) {
         .filter(Boolean),
     ),
   );
+}
+
+async function parseApiPayload(response) {
+  const responseText = await response.text();
+  let payload = {};
+  try {
+    payload = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    payload = { error: responseText || 'El servidor no regreso una respuesta valida.' };
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? `Error ${response.status}`);
+  }
+
+  return payload;
+}
+
+function getApiUrl(path) {
+  const normalizedBaseUrl = String(apiBaseUrl || '').replace(/\/+$/, '');
+
+  if (!normalizedBaseUrl && !import.meta.env.DEV) {
+    throw new Error('No esta configurada VITE_API_BASE_URL para conectar con el backend.');
+  }
+
+  return `${normalizedBaseUrl}${path}`;
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`El servidor tardo demasiado en responder: ${getUrlOrigin(url)}.`);
+    }
+    throw new Error(`No se pudo conectar con el backend en ${getUrlOrigin(url)}. Revisa que la API este desplegada y que VITE_API_BASE_URL sea correcta.`);
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function getUrlOrigin(url) {
+  try {
+    return new URL(url, window.location.origin).origin;
+  } catch {
+    return String(url);
+  }
 }
 
 function loadGoogleMaps() {
@@ -2559,7 +2816,7 @@ function getSearchText(politician, scope) {
     Ciudad: [politician.municipality, politician.state],
     Cargo: [politician.office, politician.level, politician.federalDistrict, politician.localDistrict],
     Partido: [politician.party],
-    Tema: politician.topics,
+    Tema: [...politician.topics, ...(politician.posts ?? []).flatMap((post) => post.tags ?? [])],
     General: [
       politician.name,
       politician.municipality,
@@ -2572,6 +2829,7 @@ function getSearchText(politician, scope) {
       politician.profile,
       ...politician.topics,
       ...politician.proposals.map((proposal) => `${proposal.topic} ${proposal.text}`),
+      ...(politician.posts ?? []).map((post) => `${post.title} ${post.body} ${(post.tags ?? []).join(' ')}`),
     ],
   };
 
