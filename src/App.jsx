@@ -353,6 +353,9 @@ function App() {
   const [entryMode, setEntryMode] = useState(null);
   const [view, setView] = useState('feed');
   const [politicianCode, setPoliticianCode] = useState('');
+  const [politicianPassword, setPoliticianPassword] = useState('');
+  const [politicianNewPassword, setPoliticianNewPassword] = useState('');
+  const [politicianLoginStep, setPoliticianLoginStep] = useState('login');
   const [loginError, setLoginError] = useState('');
   const [location, setLocation] = useState(locationPresets[0]);
   const [level, setLevel] = useState('Todos');
@@ -704,22 +707,80 @@ function App() {
     setLoginError('');
   };
 
-  const enterAsPolitician = (event) => {
-    event.preventDefault();
-    const normalizedCode = normalizeText(politicianCode);
-    const matchedPolitician = politicians.find((politician) => normalizeText(politician.governmentId) === normalizedCode);
-
-    if (!matchedPolitician) {
-      setLoginError('No encontramos un perfil verificado con ese codigo. Revisa el ID o intenta cuando el registro oficial ya este cargado.');
-      return;
-    }
-
+  const completePoliticianLogin = (matchedPolitician) => {
     setActiveId(matchedPolitician.id);
     setOwnerId(matchedPolitician.id);
     setEntryMode('politician');
     setView('profile');
     setLoginError('');
+    setPoliticianPassword('');
+    setPoliticianNewPassword('');
+    setPoliticianLoginStep('login');
     setIsCandidatePortalOpen(false);
+  };
+
+  const enterAsPolitician = async (event) => {
+    event.preventDefault();
+    setLoginError('');
+
+    if (!politicianCode.trim() || !politicianPassword) {
+      setLoginError('Ingresa tu ID oficial y contrasena.');
+      return;
+    }
+
+    try {
+      const response = await fetchWithTimeout(getApiUrl('/api/politician-login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          governmentPoliticianId: politicianCode.trim(),
+          password: politicianPassword,
+        }),
+      });
+      const payload = await parseApiPayload(response);
+      const matchedPolitician = politicians.find((politician) => politician.id === payload.politician?.id);
+
+      if (!matchedPolitician) {
+        setLoginError('Acceso validado, pero el perfil todavia no esta cargado en el feed.');
+        return;
+      }
+
+      if (payload.mustResetPassword) {
+        setPoliticianLoginStep('reset');
+        setLoginError('Por seguridad, crea una contrasena nueva antes de entrar.');
+        return;
+      }
+
+      completePoliticianLogin(matchedPolitician);
+    } catch (error) {
+      setLoginError(error.message);
+    }
+  };
+
+  const resetPoliticianPassword = async (event) => {
+    event.preventDefault();
+    setLoginError('');
+
+    try {
+      const response = await fetchWithTimeout(getApiUrl('/api/politician-password-reset'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          governmentPoliticianId: politicianCode.trim(),
+          currentPassword: politicianPassword,
+          newPassword: politicianNewPassword,
+        }),
+      });
+      const payload = await parseApiPayload(response);
+      const matchedPolitician = politicians.find((politician) => politician.id === payload.politician?.id);
+      if (!matchedPolitician) {
+        setLoginError('Contrasena actualizada, pero el perfil todavia no esta cargado en el feed.');
+        return;
+      }
+      completePoliticianLogin(matchedPolitician);
+    } catch (error) {
+      setLoginError(error.message);
+    }
   };
 
   const goLanding = () => {
@@ -943,9 +1004,15 @@ function App() {
       <LandingPage
         politicianCode={politicianCode}
         setPoliticianCode={setPoliticianCode}
+        politicianPassword={politicianPassword}
+        setPoliticianPassword={setPoliticianPassword}
+        politicianNewPassword={politicianNewPassword}
+        setPoliticianNewPassword={setPoliticianNewPassword}
+        loginStep={politicianLoginStep}
         loginError={loginError}
         onCitizenEnter={enterAsCitizen}
         onPoliticianEnter={enterAsPolitician}
+        onPasswordReset={resetPoliticianPassword}
       />
     );
   }
@@ -992,8 +1059,14 @@ function App() {
           <CandidatePortalModal
             politicianCode={politicianCode}
             setPoliticianCode={setPoliticianCode}
+            politicianPassword={politicianPassword}
+            setPoliticianPassword={setPoliticianPassword}
+            politicianNewPassword={politicianNewPassword}
+            setPoliticianNewPassword={setPoliticianNewPassword}
+            loginStep={politicianLoginStep}
             loginError={loginError}
             onPoliticianEnter={enterAsPolitician}
+            onPasswordReset={resetPoliticianPassword}
             onClose={() => setIsCandidatePortalOpen(false)}
           />
         )}
@@ -1046,8 +1119,14 @@ function App() {
           <CandidatePortalModal
             politicianCode={politicianCode}
             setPoliticianCode={setPoliticianCode}
+            politicianPassword={politicianPassword}
+            setPoliticianPassword={setPoliticianPassword}
+            politicianNewPassword={politicianNewPassword}
+            setPoliticianNewPassword={setPoliticianNewPassword}
+            loginStep={politicianLoginStep}
             loginError={loginError}
             onPoliticianEnter={enterAsPolitician}
+            onPasswordReset={resetPoliticianPassword}
             onClose={() => setIsCandidatePortalOpen(false)}
           />
         )}
@@ -1140,8 +1219,14 @@ function App() {
         <CandidatePortalModal
           politicianCode={politicianCode}
           setPoliticianCode={setPoliticianCode}
+          politicianPassword={politicianPassword}
+          setPoliticianPassword={setPoliticianPassword}
+          politicianNewPassword={politicianNewPassword}
+          setPoliticianNewPassword={setPoliticianNewPassword}
+          loginStep={politicianLoginStep}
           loginError={loginError}
           onPoliticianEnter={enterAsPolitician}
+          onPasswordReset={resetPoliticianPassword}
           onClose={() => setIsCandidatePortalOpen(false)}
         />
       )}
@@ -1158,7 +1243,19 @@ function App() {
   );
 }
 
-function LandingPage({ politicianCode, setPoliticianCode, loginError, onCitizenEnter, onPoliticianEnter }) {
+function LandingPage({
+  politicianCode,
+  setPoliticianCode,
+  politicianPassword,
+  setPoliticianPassword,
+  politicianNewPassword,
+  setPoliticianNewPassword,
+  loginStep,
+  loginError,
+  onCitizenEnter,
+  onPoliticianEnter,
+  onPasswordReset,
+}) {
   const [isCandidateLoginOpen, setIsCandidateLoginOpen] = useState(false);
 
   return (
@@ -1196,26 +1293,46 @@ function LandingPage({ politicianCode, setPoliticianCode, loginError, onCitizenE
       </section>
 
       {isCandidateLoginOpen && (
-        <CandidatePortalModal
-          politicianCode={politicianCode}
-          setPoliticianCode={setPoliticianCode}
-          loginError={loginError}
-          onPoliticianEnter={onPoliticianEnter}
-          onClose={() => setIsCandidateLoginOpen(false)}
-        />
+          <CandidatePortalModal
+            politicianCode={politicianCode}
+            setPoliticianCode={setPoliticianCode}
+            politicianPassword={politicianPassword}
+            setPoliticianPassword={setPoliticianPassword}
+            politicianNewPassword={politicianNewPassword}
+            setPoliticianNewPassword={setPoliticianNewPassword}
+            loginStep={loginStep}
+            loginError={loginError}
+            onPoliticianEnter={onPoliticianEnter}
+            onPasswordReset={onPasswordReset}
+            onClose={() => setIsCandidateLoginOpen(false)}
+          />
       )}
     </main>
   );
 }
 
-function CandidatePortalModal({ politicianCode, setPoliticianCode, loginError, onPoliticianEnter, onClose }) {
+function CandidatePortalModal({
+  politicianCode,
+  setPoliticianCode,
+  politicianPassword,
+  setPoliticianPassword,
+  politicianNewPassword,
+  setPoliticianNewPassword,
+  loginStep,
+  loginError,
+  onPoliticianEnter,
+  onPasswordReset,
+  onClose,
+}) {
+  const isResetStep = loginStep === 'reset';
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/60 px-4 py-6 backdrop-blur-sm">
-      <form onSubmit={onPoliticianEnter} className="w-full max-w-lg rounded-3xl border border-white/10 bg-ink p-6 text-white shadow-panel">
+      <form onSubmit={isResetStep ? onPasswordReset : onPoliticianEnter} className="w-full max-w-lg rounded-3xl border border-white/10 bg-ink p-6 text-white shadow-panel">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-maize">Acceso de candidatura</p>
-            <h2 className="mt-2 text-2xl font-black">Ingresa con tu ID oficial</h2>
+            <h2 className="mt-2 text-2xl font-black">{isResetStep ? 'Crea tu contrasena segura' : 'Ingresa con ID y contrasena'}</h2>
           </div>
           <button
             type="button"
@@ -1227,7 +1344,7 @@ function CandidatePortalModal({ politicianCode, setPoliticianCode, loginError, o
           </button>
         </div>
         <p className="mt-4 text-sm leading-6 text-white/70">
-          Usa el codigo oficial para reclamar tu perfil, editar informacion y publicar propuestas verificadas.
+          El gobierno debe entregar tu ID oficial y una contrasena inicial. En el primer acceso tendras que cambiarla para proteger tu perfil.
         </p>
         <label className="mt-6 block text-sm font-black uppercase tracking-[0.12em] text-white/60">
           ID oficial
@@ -1235,19 +1352,45 @@ function CandidatePortalModal({ politicianCode, setPoliticianCode, loginError, o
             className="mt-3 h-14 w-full rounded-2xl border border-white/15 bg-white px-4 text-sm font-black text-ink outline-none focus:border-maize"
             value={politicianCode}
             onChange={(event) => setPoliticianCode(event.target.value)}
-            placeholder="MX-CHIH-CHIHUAHUA-EST-0054"
+            placeholder="Ingresa tu ID oficial"
+            autoComplete="username"
+            disabled={isResetStep}
           />
         </label>
+        <label className="mt-4 block text-sm font-black uppercase tracking-[0.12em] text-white/60">
+          {isResetStep ? 'Contrasena inicial' : 'Contrasena'}
+          <input
+            type="password"
+            className="mt-3 h-14 w-full rounded-2xl border border-white/15 bg-white px-4 text-sm font-black text-ink outline-none focus:border-maize"
+            value={politicianPassword}
+            onChange={(event) => setPoliticianPassword(event.target.value)}
+            placeholder={isResetStep ? 'Confirma tu contrasena inicial' : 'Ingresa tu contrasena'}
+            autoComplete={isResetStep ? 'current-password' : 'current-password'}
+          />
+        </label>
+        {isResetStep && (
+          <label className="mt-4 block text-sm font-black uppercase tracking-[0.12em] text-white/60">
+            Nueva contrasena
+            <input
+              type="password"
+              className="mt-3 h-14 w-full rounded-2xl border border-white/15 bg-white px-4 text-sm font-black text-ink outline-none focus:border-maize"
+              value={politicianNewPassword}
+              onChange={(event) => setPoliticianNewPassword(event.target.value)}
+              placeholder="Minimo 10 caracteres con letras y numeros"
+              autoComplete="new-password"
+            />
+          </label>
+        )}
         {loginError && (
           <p className="mt-4 rounded-2xl bg-signal/20 p-4 text-sm font-bold text-white">
             {loginError}
           </p>
         )}
         <button className="mt-6 h-14 w-full rounded-full bg-maize text-base font-black text-ink transition hover:bg-maize/90">
-          Validar codigo
+          {isResetStep ? 'Guardar nueva contrasena' : 'Entrar al portal'}
         </button>
         <p className="mt-4 text-xs font-bold leading-5 text-white/55">
-          En produccion este acceso debe continuar con registro seguro, email/magic link o autenticacion de dos factores.
+          Nunca compartas tu contrasena. El ID por si solo no permite entrar al perfil.
         </p>
       </form>
     </div>
@@ -1923,12 +2066,13 @@ function PoliticianPost({ politician, post, active, onOpen, onOpenImage }) {
       <footer className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-ink/10 pt-3 text-xs font-bold text-ink/52">
         <span>Publicado: {postDate}</span>
       </footer>
-      <ShareButton
+      <PostActions
         className="mt-3"
-        politicianId={politician.id}
+        politician={politician}
         contentId={latestPost?.id || (latestPost ? 'publicacion' : 'perfil')}
-        title={`${postTitle} - ${politician.name}`}
-        text={`${postBody}\n\n${politician.name} | ${politician.office} | ${politician.party}`}
+        title={postTitle}
+        body={postBody}
+        postType={postType}
       />
     </article>
   );
@@ -2104,12 +2248,13 @@ function CandidateProfilePage({
                 </button>
               )}
               <p className="mt-3 text-sm leading-6 text-ink/72">{post.body}</p>
-              <ShareButton
+              <PostActions
                 className="mt-3"
-                politicianId={politician.id}
+                politician={politician}
                 contentId={post.id || `publicacion-${index + 1}`}
-                title={`${post.title || 'Publicacion'} - ${politician.name}`}
-                text={`${post.body}\n\n${politician.name} | ${politician.office} | ${politician.party}`}
+                title={post.title || 'Publicacion'}
+                body={post.body}
+                postType={post.type ?? 'Publicacion'}
               />
             </article>
           ))}
@@ -3153,6 +3298,8 @@ function CameraCaptureModal({ title, facingMode = 'environment', onCapture, onCl
 function CivicChatbot({ location }) {
   const [message, setMessage] = useState('');
   const [chatStatus, setChatStatus] = useState('idle');
+  const [dictationStatus, setDictationStatus] = useState('idle');
+  const recognitionRef = useRef(null);
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -3160,6 +3307,12 @@ function CivicChatbot({ location }) {
       sources: [],
     },
   ]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort?.();
+    };
+  }, []);
 
   const sendMessage = async (event) => {
     event.preventDefault();
@@ -3212,6 +3365,46 @@ function CivicChatbot({ location }) {
     `Que candidaturas hay en ${location.municipality}?`,
   ];
 
+  const startDictation = () => {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      setDictationStatus('unsupported');
+      return;
+    }
+
+    if (dictationStatus === 'listening') {
+      recognitionRef.current?.stop?.();
+      setDictationStatus('idle');
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = 'es-MX';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognitionRef.current = recognition;
+
+    let finalTranscript = '';
+    recognition.onstart = () => setDictationStatus('listening');
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const transcript = event.results[index][0].transcript;
+        if (event.results[index].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      setMessage(`${finalTranscript || interimTranscript}`.trim());
+    };
+    recognition.onerror = () => setDictationStatus('error');
+    recognition.onend = () => {
+      setDictationStatus((current) => (current === 'listening' ? 'idle' : current));
+    };
+    recognition.start();
+  };
+
   return (
     <section id="asistente" className="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-panel">
       <div className="border-b border-ink/10 bg-ink p-4 text-white">
@@ -3251,6 +3444,13 @@ function CivicChatbot({ location }) {
         {messages.map((item, index) => (
           <div key={`${item.role}-${index}`} className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-sm transition ${item.role === 'user' ? 'ml-auto rounded-br-md bg-civic text-white' : 'mr-auto rounded-bl-md border border-ink/10 bg-ballot text-ink'}`}>
             <p className="whitespace-pre-wrap text-sm leading-6">{item.text}</p>
+            {item.role === 'assistant' && (
+              <ReadAloudButton
+                className="mt-3"
+                text={`Respuesta del asistente civico. ${item.text}`}
+                label="Escuchar respuesta"
+              />
+            )}
             {item.sources?.length > 0 && (
               <div className="mt-3 border-t border-ink/10 pt-2">
                 <p className="text-xs font-black uppercase tracking-[0.12em] opacity-60">Fuentes usadas</p>
@@ -3277,13 +3477,33 @@ function CivicChatbot({ location }) {
             placeholder="Escribe una pregunta sobre candidaturas, propuestas, temas o ciudades..."
           />
           <div className="flex items-center justify-between gap-3 border-t border-ink/10 pt-2">
-            <p className="hidden text-xs font-bold text-ink/45 sm:block">Usa lenguaje natural. Ej. "quienes hablan de salud"</p>
-            <button
-              disabled={chatStatus === 'loading' || !message.trim()}
-              className="h-10 shrink-0 rounded-md bg-signal px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-signal/90 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-signal/45"
-            >
-              {chatStatus === 'loading' ? 'Enviando' : 'Enviar'}
-            </button>
+            <p className="hidden text-xs font-bold text-ink/45 sm:block">
+              {dictationStatus === 'unsupported'
+                ? 'Tu navegador no soporta dictado.'
+                : dictationStatus === 'listening'
+                  ? 'Escuchando... habla con claridad.'
+                  : 'Usa lenguaje natural. Ej. "quienes hablan de salud"'}
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={startDictation}
+                className={`h-10 rounded-md border px-3 text-sm font-black transition hover:-translate-y-0.5 ${
+                  dictationStatus === 'listening'
+                    ? 'border-signal/25 bg-signal/10 text-signal'
+                    : 'border-civic/25 bg-civic/10 text-civic hover:border-civic/40'
+                }`}
+                aria-label={dictationStatus === 'listening' ? 'Detener dictado' : 'Dictar pregunta con microfono'}
+              >
+                {dictationStatus === 'listening' ? 'Detener' : 'Dictar'}
+              </button>
+              <button
+                disabled={chatStatus === 'loading' || !message.trim()}
+                className="h-10 rounded-md bg-signal px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-signal/90 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-signal/45"
+              >
+                {chatStatus === 'loading' ? 'Enviando' : 'Enviar'}
+              </button>
+            </div>
           </div>
         </div>
       </form>
@@ -3329,6 +3549,80 @@ function Rule({ text }) {
 
 function Tag({ children }) {
   return <span className="rounded-md bg-ink/5 px-2 py-1 text-xs font-black text-ink/65">{children}</span>;
+}
+
+function PostActions({ politician, contentId, title, body, postType, className = '' }) {
+  return (
+    <div className={`flex flex-wrap items-center gap-2 border-t border-ink/10 pt-3 ${className}`}>
+      <ReadAloudButton
+        text={buildPostSpeechText({ politician, title, body, postType })}
+        label="Leer publicación"
+      />
+      <ShareButton
+        politicianId={politician.id}
+        contentId={contentId}
+        title={`${title} - ${politician.name}`}
+        text={`${body}\n\n${politician.name} | ${politician.office} | ${politician.party}`}
+      />
+    </div>
+  );
+}
+
+function ReadAloudButton({ text, label, className = '' }) {
+  const [status, setStatus] = useState('idle');
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const toggleSpeech = () => {
+    if (!('speechSynthesis' in window)) {
+      setStatus('unsupported');
+      return;
+    }
+
+    if (status === 'reading') {
+      window.speechSynthesis.cancel();
+      setStatus('idle');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-MX';
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.onend = () => setStatus('idle');
+    utterance.onerror = () => setStatus('idle');
+
+    const voices = window.speechSynthesis.getVoices();
+    const spanishVoice = voices.find((voice) => voice.lang === 'es-MX') ?? voices.find((voice) => voice.lang?.startsWith('es'));
+    if (spanishVoice) utterance.voice = spanishVoice;
+
+    setStatus('reading');
+    window.speechSynthesis.speak(utterance);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggleSpeech}
+      className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-black transition hover:-translate-y-0.5 hover:shadow-panel ${className} ${
+        status === 'reading'
+          ? 'border-signal/25 bg-signal/10 text-signal'
+          : 'border-civic/25 bg-civic/10 text-civic hover:border-civic/40'
+      }`}
+      aria-label={status === 'reading' ? 'Detener lectura de la publicacion' : 'Leer publicacion en voz alta'}
+      title={status === 'unsupported' ? 'Tu navegador no soporta lectura en voz alta' : undefined}
+    >
+      <SpeakerIcon />
+      {status === 'reading' ? 'Detener lectura' : label}
+    </button>
+  );
 }
 
 function ShareButton({ politicianId, contentId, title, text, className = '' }) {
@@ -3507,6 +3801,16 @@ function ShareIcon() {
   );
 }
 
+function SpeakerIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M11 5L6 9H3v6h3l5 4V5z" />
+      <path d="M15.5 8.5a5 5 0 010 7" />
+      <path d="M18.5 5.5a9 9 0 010 13" />
+    </svg>
+  );
+}
+
 function FlagIcon() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -3514,6 +3818,18 @@ function FlagIcon() {
       <path d="M5 4h12l-2 5 2 5H5" />
     </svg>
   );
+}
+
+function buildPostSpeechText({ politician, title, body, postType }) {
+  const parts = [
+    `${postType || 'Publicacion'} de ${politician.name}.`,
+    `Partido: ${politician.party}.`,
+    `Cargo: ${politician.office}.`,
+    title ? `Titulo: ${title}.` : '',
+    `Contenido: ${body}`,
+  ];
+
+  return parts.filter(Boolean).join(' ');
 }
 
 function getInitials(name) {

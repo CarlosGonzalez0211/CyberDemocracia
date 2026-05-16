@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import crypto from 'node:crypto';
 import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
@@ -6,7 +7,10 @@ import { createClient } from '@supabase/supabase-js';
 const app = express();
 const port = process.env.PORT ?? process.env.API_PORT ?? 8787;
 const geminiModel = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
-const ai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
+const geminiProvider = normalizeGeminiProvider(process.env.GEMINI_PROVIDER);
+const vertexProject = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || '';
+const vertexLocation = process.env.GOOGLE_CLOUD_LOCATION || process.env.GOOGLE_VERTEX_LOCATION || 'us-central1';
+const ai = createGeminiClient();
 const supabase =
   process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY
     ? createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
@@ -23,6 +27,36 @@ const partyCatalog = [
   { name: 'Union Malaventurada', shortName: 'PUM', color: '#0A0A0F', description: 'Partido de identidad melancolica, sobria y profunda.' },
   { name: 'Amor Eterno por Chihuahua', shortName: 'AEC', color: '#1E90FF', description: 'Partido de identidad alegre, brillante y chihuahuense.' },
 ];
+
+function normalizeGeminiProvider(value) {
+  const provider = String(value ?? '').trim().toLowerCase();
+  if (['vertex', 'vertex-ai', 'vertex_ai', 'google-cloud'].includes(provider)) return 'vertex';
+  return 'developer';
+}
+
+function createGeminiClient() {
+  if (geminiProvider === 'vertex') {
+    if (!vertexProject) {
+      console.warn('GEMINI_PROVIDER=vertex requiere GOOGLE_CLOUD_PROJECT, GCLOUD_PROJECT o GCP_PROJECT.');
+      return null;
+    }
+
+    return new GoogleGenAI({
+      vertexai: true,
+      project: vertexProject,
+      location: vertexLocation,
+    });
+  }
+
+  return process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
+}
+
+function getGeminiConfigErrorMessage() {
+  if (geminiProvider === 'vertex') {
+    return 'Vertex AI no esta configurado. Revisa GEMINI_PROVIDER, GOOGLE_CLOUD_PROJECT y GOOGLE_CLOUD_LOCATION.';
+  }
+  return 'GEMINI_API_KEY no esta configurada en el servidor.';
+}
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -43,13 +77,16 @@ app.get('/api/health', (req, res) => {
     supabase: Boolean(supabase),
     supabaseAdmin: Boolean(supabaseAdmin),
     gemini: Boolean(ai),
+    geminiProvider,
     model: geminiModel,
+    vertexProject: geminiProvider === 'vertex' ? vertexProject : undefined,
+    vertexLocation: geminiProvider === 'vertex' ? vertexLocation : undefined,
   });
 });
 
 app.post('/api/compare', async (req, res) => {
   if (!ai) {
-    res.status(500).json({ error: 'GEMINI_API_KEY no esta configurada en el servidor.' });
+    res.status(500).json({ error: getGeminiConfigErrorMessage() });
     return;
   }
 
@@ -79,9 +116,55 @@ app.post('/api/compare', async (req, res) => {
   }
 });
 
+app.post('/api/politician-login', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'El acceso de candidaturas no esta configurado en el servidor.' });
+    return;
+  }
+
+  try {
+    const result = await loginPolitician(req.body ?? {});
+    res.json(result);
+  } catch (error) {
+    console.error('Politician login error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo validar el acceso.' });
+  }
+});
+
+app.post('/api/politician-password-reset', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'El acceso de candidaturas no esta configurado en el servidor.' });
+    return;
+  }
+
+  try {
+    const result = await resetPoliticianPassword(req.body ?? {});
+    res.json(result);
+  } catch (error) {
+    console.error('Politician password reset error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo restablecer la contrasena.' });
+  }
+});
+
+app.post('/api/admin/politician-initial-password', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'La administracion de candidaturas no esta configurada.' });
+    return;
+  }
+
+  try {
+    verifyPartyAdmin(req.body?.adminPassword);
+    const result = await setPoliticianInitialPassword(req.body ?? {});
+    res.json(result);
+  } catch (error) {
+    console.error('Set initial politician password error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo cargar la contrasena inicial.' });
+  }
+});
+
 app.post('/api/summarize-candidate', async (req, res) => {
   if (!ai) {
-    res.status(500).json({ error: 'GEMINI_API_KEY no esta configurada en el servidor.' });
+    res.status(500).json({ error: getGeminiConfigErrorMessage() });
     return;
   }
 
@@ -477,6 +560,7 @@ Formato de respuesta:
 function findRelevantProfiles(message, profiles) {
   const normalizedMessage = normalizeText(message);
   const nameQuery = extractNameQuery(normalizedMessage);
+  const requestedTopics = extractRequestedTopics(normalizedMessage);
 
   if (nameQuery) {
     const nameTerms = nameQuery.split(/\s+/).filter((term) => term.length > 2);
@@ -486,6 +570,18 @@ function findRelevantProfiles(message, profiles) {
     });
 
     if (exactNameMatches.length > 0) return exactNameMatches;
+  }
+
+  if (requestedTopics.length > 0) {
+    const topicMatches = profiles
+      .map((profile) => {
+        const topicScore = scoreTopicMatch(profile, requestedTopics);
+        return { ...profile, score: topicScore };
+      })
+      .filter((profile) => profile.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    if (topicMatches.length > 0) return topicMatches;
   }
 
   const stopwords = new Set([
@@ -536,6 +632,48 @@ function findRelevantProfiles(message, profiles) {
     })
     .filter((profile) => profile.score > 0)
     .sort((a, b) => b.score - a.score);
+}
+
+function extractRequestedTopics(normalizedMessage) {
+  const topicAliases = [
+    { topic: 'Salud', aliases: ['salud', 'hospital', 'hospitales', 'clinica', 'clinicas', 'medicina', 'medicamentos', 'vacuna', 'vacunas', 'inyeccion', 'inyecciones'] },
+    { topic: 'Seguridad', aliases: ['seguridad', 'policia', 'policias', 'delito', 'delitos', 'violencia', 'vigilancia', 'crimen'] },
+    { topic: 'Economia', aliases: ['economia', 'empleo', 'trabajo', 'salario', 'inversion', 'negocios'] },
+    { topic: 'Educacion', aliases: ['educacion', 'escuela', 'escuelas', 'universidad', 'maestros', 'becas'] },
+    { topic: 'Medio ambiente', aliases: ['medio ambiente', 'ambiental', 'agua', 'contaminacion', 'clima', 'ecologia'] },
+    { topic: 'Politica Social', aliases: ['politica social', 'apoyos', 'bienestar', 'pobreza', 'desigualdad'] },
+    { topic: 'Libertad Ciudadana', aliases: ['libertad ciudadana', 'libertades', 'derechos civiles', 'libertad'] },
+    { topic: 'Pueblos originarios', aliases: ['pueblos originarios', 'comunidad indigena', 'indigena', 'indigenas'] },
+    { topic: 'Poblacion LGBT', aliases: ['poblacion lgbt', 'lgbt', 'lgbtq', 'diversidad sexual'] },
+    { topic: 'Politica externa', aliases: ['politica externa', 'exterior', 'internacional', 'relaciones exteriores'] },
+  ];
+
+  return topicAliases
+    .filter(({ aliases }) => aliases.some((alias) => normalizedMessage.includes(normalizeText(alias))))
+    .map(({ topic }) => topic);
+}
+
+function scoreTopicMatch(profile, requestedTopics) {
+  const normalizedTopics = requestedTopics.map(normalizeText);
+  let score = 0;
+
+  for (const topic of profile.topics ?? []) {
+    if (normalizedTopics.includes(normalizeText(topic))) score += 4;
+  }
+
+  for (const proposal of profile.proposals ?? []) {
+    const text = normalizeText(`${proposal.topic ?? ''} ${proposal.text ?? ''}`);
+    if (normalizedTopics.some((topic) => text.includes(topic))) score += 3;
+  }
+
+  for (const post of profile.posts ?? []) {
+    const tagText = normalizeText((post.tags ?? []).join(' '));
+    const postText = normalizeText(`${post.type ?? ''} ${post.title ?? ''} ${post.body ?? ''}`);
+    if (normalizedTopics.some((topic) => tagText.includes(topic))) score += isProposalPost(post) ? 5 : 2;
+    if (normalizedTopics.some((topic) => postText.includes(topic))) score += isProposalPost(post) ? 3 : 1;
+  }
+
+  return score;
 }
 
 function extractNameQuery(normalizedMessage) {
@@ -612,6 +750,8 @@ Reglas obligatorias:
 - Contesta solo con base en los datos encontrados.
 - Si no hay datos suficientes, dilo claramente.
 - Trata los posts con tipo "Propuesta" como propuestas publicadas.
+- Si hay perfiles en "Datos encontrados", no respondas que no hay perfiles. Usa esos datos y cita las propuestas actuales relevantes.
+- No descartes perfiles estatales por municipio cuando su municipio sea "Todo el estado".
 - No recomiendes votar por nadie.
 - No declares ganadores.
 - No digas que un candidato es mejor o peor.
@@ -643,6 +783,140 @@ async function verifyPoliticianAccess(politicianId, governmentPoliticianId) {
   }
 
   return data;
+}
+
+async function loginPolitician({ governmentPoliticianId, password }) {
+  const governmentId = String(governmentPoliticianId ?? '').trim();
+  const candidatePassword = String(password ?? '');
+
+  if (!governmentId || !candidatePassword) {
+    throw publicError(400, 'Ingresa tu ID oficial y contrasena.');
+  }
+
+  const account = await readPoliticianSecurityAccount(governmentId);
+  const hasPassword = Boolean(account.password_hash && account.password_salt);
+
+  if (!hasPassword) {
+    throw publicError(403, 'Esta cuenta todavia no tiene contrasena inicial cargada por el gobierno.');
+  }
+
+  if (!verifyPassword(candidatePassword, account.password_salt, account.password_hash)) {
+    throw publicError(403, 'ID oficial o contrasena incorrectos.');
+  }
+
+  const politician = formatPoliticianLogin(account);
+  if (account.must_reset_password) {
+    return { mustResetPassword: true, politician };
+  }
+
+  return { mustResetPassword: false, politician };
+}
+
+async function resetPoliticianPassword({ governmentPoliticianId, currentPassword, newPassword }) {
+  const governmentId = String(governmentPoliticianId ?? '').trim();
+  const current = String(currentPassword ?? '');
+  const next = String(newPassword ?? '');
+
+  if (!governmentId || !current || !next) {
+    throw publicError(400, 'Ingresa ID oficial, contrasena actual y contrasena nueva.');
+  }
+  validateCandidatePassword(next);
+
+  const account = await readPoliticianSecurityAccount(governmentId);
+  if (!account.password_hash || !account.password_salt || !verifyPassword(current, account.password_salt, account.password_hash)) {
+    throw publicError(403, 'La contrasena actual no es correcta.');
+  }
+  if (current === next) {
+    throw publicError(400, 'La contrasena nueva debe ser diferente a la inicial.');
+  }
+
+  const passwordRecord = hashPassword(next);
+  const { error } = await supabaseAdmin
+    .from('politician_accounts')
+    .update({
+      password_hash: passwordRecord.hash,
+      password_salt: passwordRecord.salt,
+      must_reset_password: false,
+      password_updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', account.id);
+
+  if (error) throw error;
+
+  return { mustResetPassword: false, politician: formatPoliticianLogin({ ...account, must_reset_password: false }) };
+}
+
+async function setPoliticianInitialPassword({ governmentPoliticianId, initialPassword }) {
+  const governmentId = String(governmentPoliticianId ?? '').trim();
+  const password = String(initialPassword ?? '');
+
+  if (!governmentId || !password) {
+    throw publicError(400, 'Ingresa ID oficial y contrasena inicial.');
+  }
+  validateCandidatePassword(password);
+
+  const account = await readPoliticianSecurityAccount(governmentId);
+  const passwordRecord = hashPassword(password);
+  const { error } = await supabaseAdmin
+    .from('politician_accounts')
+    .update({
+      password_hash: passwordRecord.hash,
+      password_salt: passwordRecord.salt,
+      must_reset_password: true,
+      password_updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', account.id);
+
+  if (error) throw error;
+
+  return {
+    ok: true,
+    politician: formatPoliticianLogin({ ...account, must_reset_password: true }),
+  };
+}
+
+async function readPoliticianSecurityAccount(governmentPoliticianId) {
+  const { data, error } = await supabaseAdmin
+    .from('politician_accounts')
+    .select('id, government_politician_id, display_name, verification_status, password_hash, password_salt, must_reset_password')
+    .eq('government_politician_id', governmentPoliticianId)
+    .single();
+
+  if (error || !data || data.verification_status !== 'verified') {
+    throw publicError(403, 'ID oficial o contrasena incorrectos.');
+  }
+
+  return data;
+}
+
+function formatPoliticianLogin(account) {
+  return {
+    id: account.id,
+    governmentId: account.government_politician_id,
+    name: account.display_name,
+  };
+}
+
+function validateCandidatePassword(password) {
+  if (password.length < 10) {
+    throw publicError(400, 'La contrasena nueva debe tener al menos 10 caracteres.');
+  }
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    throw publicError(400, 'La contrasena nueva debe incluir letras y numeros.');
+  }
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 210000, 64, 'sha512').toString('hex');
+  return { salt, hash };
+}
+
+function verifyPassword(password, salt, expectedHash) {
+  const hash = crypto.pbkdf2Sync(password, salt, 210000, 64, 'sha512').toString('hex');
+  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(expectedHash, 'hex'));
 }
 
 async function verifyPostOwner(postId, politicianId) {
@@ -1098,29 +1372,82 @@ function buildDatabaseFallbackAnswer(message, profiles, quotaLimited = false) {
       : 'No encontre perfiles relacionados directamente en la base con esa pregunta.';
   }
 
+  const requestedTopics = extractRequestedTopics(normalizeText(message));
   const intro = quotaLimited
-    ? 'El asistente de IA alcanzo su limite temporal, pero encontre coincidencias directas en la base:'
-    : 'Encontre estas coincidencias directas en la base:';
+    ? 'La IA generativa alcanzo su limite temporal. Te muestro coincidencias resumidas directamente desde la base:'
+    : 'Encontre estas coincidencias resumidas directamente desde la base:';
 
-  const lines = profiles.slice(0, 8).map((profile) => {
-    const topics = (profile.topics ?? []).slice(0, 4).join(', ') || 'sin temas publicados';
-    const proposals = (profile.proposals ?? [])
-      .slice(0, 2)
-      .map((proposal) => `${proposal.topic}: ${proposal.text}`)
-      .join(' ');
-    const proposalPosts = getProposalPosts(profile)
-      .slice(0, 2)
-      .map((post) => {
-        const tags = (post.tags ?? []).join(', ');
-        const title = post.title ? `${post.title}: ` : '';
-        return `${tags ? `${tags}: ` : ''}${title}${post.body}`;
-      })
-      .join(' ');
+  const lines = profiles.slice(0, 4).map((profile) => {
+    const topics = selectRelevantTopics(profile, requestedTopics).join(', ') || 'sin temas publicados';
+    const proposal = selectFallbackProposal(profile, requestedTopics);
 
-    return `- ${profile.name} | ${profile.office} | ${profile.municipality}. Temas: ${topics}.${proposals || proposalPosts ? ` Propuestas: ${[proposals, proposalPosts].filter(Boolean).join(' ')}` : ''}`;
+    return [
+      `- ${profile.name}`,
+      `  Cargo: ${profile.office} | ${profile.municipality}`,
+      `  Temas: ${topics}`,
+      `  Propuesta relacionada: ${proposal || 'sin propuesta especifica visible en el resumen.'}`,
+    ].join('\n');
   });
 
-  return `${intro}\n\n${lines.join('\n')}\n\nEsta respuesta usa busqueda directa, no analisis generativo.`;
+  const remaining = profiles.length > 4 ? `\n\nHay ${profiles.length - 4} coincidencia(s) adicional(es). Usa filtros por tema, cargo o municipio para acotar la busqueda.` : '';
+
+  return `${intro}\n\n${lines.join('\n\n')}${remaining}\n\nNota: esta respuesta es temporal y usa busqueda directa porque la IA generativa no estuvo disponible.`;
+}
+
+function selectRelevantTopics(profile, requestedTopics) {
+  const topics = profile.topics ?? [];
+  if (!requestedTopics.length) return topics.slice(0, 3);
+
+  const requested = new Set(requestedTopics.map(normalizeText));
+  const matchingTopics = topics.filter((topic) => requested.has(normalizeText(topic)));
+  return (matchingTopics.length ? matchingTopics : topics).slice(0, 3);
+}
+
+function selectFallbackProposal(profile, requestedTopics) {
+  const requested = requestedTopics.map(normalizeText);
+  const proposalPosts = getProposalPosts(profile);
+  const matchingPost = proposalPosts.find((post) => textMatchesRequestedTopic(formatPostSearchText(post), requested));
+  const selectedPost = matchingPost ?? proposalPosts[0];
+
+  if (selectedPost) {
+    const tag = selectPostTopicLabel(selectedPost, requestedTopics);
+    const title = selectedPost.title && !normalizeText(selectedPost.title).includes(normalizeText(tag))
+      ? `${selectedPost.title}: `
+      : '';
+    return `${tag}: ${truncateText(`${title}${selectedPost.body}`, 110)}`;
+  }
+
+  const legacyProposal = (profile.proposals ?? []).find((proposal) => textMatchesRequestedTopic(`${proposal.topic} ${proposal.text}`, requested))
+    ?? (profile.proposals ?? [])[0];
+  if (!legacyProposal) return '';
+
+  return `${legacyProposal.topic ?? 'Propuesta'}: ${truncateText(legacyProposal.text, 110)}`;
+}
+
+function formatPostSearchText(post) {
+  return `${post.title ?? ''} ${post.body ?? ''} ${(post.tags ?? []).join(' ')}`;
+}
+
+function textMatchesRequestedTopic(text, requestedTopics) {
+  if (!requestedTopics.length) return true;
+  const normalized = normalizeText(text);
+  return requestedTopics.some((topic) => normalized.includes(topic));
+}
+
+function selectPostTopicLabel(post, requestedTopics) {
+  const tags = post.tags ?? [];
+  if (requestedTopics.length) {
+    const requested = new Set(requestedTopics.map(normalizeText));
+    const matchingTag = tags.find((tag) => requested.has(normalizeText(tag)));
+    if (matchingTag) return matchingTag;
+  }
+  return tags[0] || post.type || 'Propuesta';
+}
+
+function truncateText(value, maxLength) {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1).trim()}...`;
 }
 
 function formatSource(profile) {
