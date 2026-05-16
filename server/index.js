@@ -315,7 +315,8 @@ function buildCandidateSummaryPrompt(politician) {
   const posts = (politician.posts ?? [])
     .map((post) => {
       const tags = (post.tags ?? []).join(', ') || 'Sin tags';
-      return `- ${post.type ?? 'Publicacion'} | ${post.title}: ${post.body} | Tags: ${tags}`;
+      const title = post.title ? `${post.title}: ` : '';
+      return `- ${post.type ?? 'Publicacion'} | ${title}${post.body} | Tags: ${tags}`;
     })
     .join('\n');
 
@@ -572,7 +573,7 @@ async function createPoliticianPost(politicianId, post) {
     .from('posts')
     .insert({
       politician_id: politicianId,
-      title: post.title.trim(),
+      title: post.title?.trim() || '',
       body: post.body.trim(),
       post_type: post.type ?? 'Publicacion',
       image_url: post.imageUrl || null,
@@ -594,7 +595,7 @@ async function updatePoliticianPost(postId, post) {
   const { data, error } = await supabaseAdmin
     .from('posts')
     .update({
-      title: post.title.trim(),
+      title: post.title?.trim() || '',
       body: post.body.trim(),
       post_type: post.type ?? 'Publicacion',
       image_url: post.imageUrl || null,
@@ -636,19 +637,43 @@ async function replacePostTopics(postId, tags) {
 }
 
 async function ensureTopic(name) {
-  const slug = slugify(name);
-  const { data: existing, error: readError } = await supabaseAdmin.from('topics').select('id, name').eq('slug', slug).maybeSingle();
-  if (readError) throw readError;
-  if (existing) return existing;
+  const cleanName = String(name ?? '').trim();
+  if (!cleanName) throw publicError(400, 'El tag de la publicacion no es valido.');
 
-  const { data, error } = await supabaseAdmin.from('topics').insert({ name, slug }).select('id, name').single();
+  const slug = slugify(name);
+  const { data: existingByName, error: nameReadError } = await supabaseAdmin
+    .from('topics')
+    .select('id, name')
+    .eq('name', cleanName)
+    .maybeSingle();
+  if (nameReadError) throw nameReadError;
+  if (existingByName) return existingByName;
+
+  const { data: existingBySlug, error: slugReadError } = await supabaseAdmin
+    .from('topics')
+    .select('id, name')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (slugReadError) throw slugReadError;
+  if (existingBySlug) return existingBySlug;
+
+  const { data, error } = await supabaseAdmin.from('topics').insert({ name: cleanName, slug }).select('id, name').single();
+  if (error?.code === '23505') {
+    const { data: retryData, error: retryError } = await supabaseAdmin
+      .from('topics')
+      .select('id, name')
+      .eq('name', cleanName)
+      .maybeSingle();
+    if (retryError) throw retryError;
+    if (retryData) return retryData;
+  }
   if (error) throw error;
   return data;
 }
 
 function validatePost(post) {
-  if (!post?.title?.trim() || !post?.body?.trim()) {
-    throw publicError(400, 'La publicacion necesita titulo y contenido.');
+  if (!post?.body?.trim()) {
+    throw publicError(400, 'La publicacion necesita contenido.');
   }
 }
 

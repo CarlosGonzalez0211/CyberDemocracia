@@ -126,6 +126,7 @@ select
   pa.display_name as name,
   pa.gender,
   coalesce(p.name, 'Sin partido') as party,
+  coalesce(p.color_hex, '#0A0A0F') as party_color_hex,
   ep.name as office,
   case ep.level
     when 'federal' then 'Federal'
@@ -198,7 +199,7 @@ left join public.electoral_locations el on el.id = pa.location_id
 left join public.proposals pr on pr.politician_id = pa.id and pr.status = 'published'
 left join public.topics t on t.id = pr.topic_id
 where pa.verification_status = 'verified'
-group by pa.id, p.name, ep.name, ep.level, el.state, el.municipality, el.federal_district, el.local_district;
+group by pa.id, p.name, p.color_hex, ep.name, ep.level, el.state, el.municipality, el.federal_district, el.local_district;
 
 alter table public.electoral_positions enable row level security;
 alter table public.electoral_locations enable row level security;

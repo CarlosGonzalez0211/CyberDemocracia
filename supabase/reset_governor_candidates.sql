@@ -16,12 +16,12 @@ delete from public.parties;
 
 insert into public.parties (id, name, short_name, color_hex)
 values
-  ('71000000-0000-0000-0000-000000000001', 'Partido Morado', 'Morado', '#6D3FA0'),
-  ('71000000-0000-0000-0000-000000000002', 'Partido Azul', 'Azul', '#0B5CAD'),
-  ('71000000-0000-0000-0000-000000000003', 'Partido Verde', 'Verde', '#B9FF1F'),
-  ('71000000-0000-0000-0000-000000000004', 'Partido Rosa', 'Rosa', '#D8B4E8'),
-  ('71000000-0000-0000-0000-000000000005', 'Partido Rojo', 'Rojo', '#B00000'),
-  ('71000000-0000-0000-0000-000000000006', 'Partido Negro', 'Negro', '#2B2B2B');
+  ('71000000-0000-0000-0000-000000000001', 'Partido Morado', 'Morado', '#6A0DAD'),
+  ('71000000-0000-0000-0000-000000000002', 'Partido Azul', 'Azul', '#1E90FF'),
+  ('71000000-0000-0000-0000-000000000003', 'Partido Verde', 'Verde', '#89CC04'),
+  ('71000000-0000-0000-0000-000000000004', 'Partido Rosa', 'Rosa', '#FFB7C5'),
+  ('71000000-0000-0000-0000-000000000005', 'Partido Rojo', 'Rojo', '#DC143C'),
+  ('71000000-0000-0000-0000-000000000006', 'Partido Negro', 'Negro', '#0A0A0F');
 
 -- Ensure the app has a statewide executive position for these candidates.
 insert into public.electoral_positions (

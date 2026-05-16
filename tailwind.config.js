@@ -4,17 +4,17 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+        sans: ['Space Grotesk', 'DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
-        ink: '#17202A',
-        civic: '#0F766E',
-        signal: '#E11D48',
-        ballot: '#F7F3EA',
+        ink: '#0A0014',
+        civic: '#6e36ad',
+        signal: '#FF3B5C',
+        ballot: '#F5F0FF',
         maize: '#F2C94C',
       },
       boxShadow: {
-        panel: '0 18px 48px rgba(23, 32, 42, 0.10)',
+        panel: '0 18px 48px rgba(110, 54, 173, 0.10)',
       },
     },
   },

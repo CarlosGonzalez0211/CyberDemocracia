@@ -14,7 +14,7 @@ with target_posts as (
           when 'Seguridad' then 5
           when 'Politica Social' then 6
           when 'Libertad Ciudadana' then 7
-          when 'Comunidad Indigena' then 8
+          when 'Pueblos originarios' then 8
           when 'Poblacion LGBT' then 9
           when 'Politica externa' then 10
           else 99

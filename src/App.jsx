@@ -295,7 +295,7 @@ const publicationTopicOptions = [
   'Seguridad',
   'Politica Social',
   'Libertad Ciudadana',
-  'Comunidad Indigena',
+  'Pueblos originarios',
   'Poblacion LGBT',
   'Politica externa',
 ];
@@ -322,6 +322,7 @@ function App() {
   const [activeId, setActiveId] = useState('1');
   const [ownerId, setOwnerId] = useState(null);
   const [handledSharedLink, setHandledSharedLink] = useState(false);
+  const [imageViewer, setImageViewer] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -350,7 +351,7 @@ function App() {
       const nextPoliticians = data.map(mapSupabasePolitician);
       setPoliticians(nextPoliticians);
       setActiveId(nextPoliticians[0].id);
-      setSelectedIds(nextPoliticians.slice(0, 2).map((politician) => politician.id));
+      setSelectedIds([]);
       setDataStatus('Supabase conectado');
     }
 
@@ -441,6 +442,11 @@ function App() {
       if (current.includes(id)) return current.filter((item) => item !== id);
       return [...current, id].slice(-2);
     });
+  };
+
+  const openComparePage = () => {
+    setSelectedIds([]);
+    setView('compare');
   };
 
   const selectLocation = (label) => {
@@ -712,7 +718,7 @@ function App() {
             if (ownerId) setActiveId(ownerId);
             setView('profile');
           }}
-          onCompare={() => setView('compare')}
+          onCompare={openComparePage}
         />
         <CandidateProfilePage
           politician={activePolitician}
@@ -726,7 +732,9 @@ function App() {
           onAddPost={(post) => addPoliticianPost(activePolitician.id, post)}
           onUpdatePost={(index, post) => updatePoliticianPost(activePolitician.id, index, post)}
           onDeletePost={(index) => deletePoliticianPost(activePolitician.id, index)}
+          onOpenImage={setImageViewer}
         />
+        <ImageViewer image={imageViewer} onClose={() => setImageViewer(null)} />
       </main>
     );
   }
@@ -743,7 +751,7 @@ function App() {
             if (ownerId) setActiveId(ownerId);
             setView('profile');
           }}
-          onCompare={() => setView('compare')}
+          onCompare={openComparePage}
         />
         <ComparePage
           politicians={politicians}
@@ -755,6 +763,7 @@ function App() {
             setView('profile');
           }}
         />
+        <ImageViewer image={imageViewer} onClose={() => setImageViewer(null)} />
       </main>
     );
   }
@@ -770,10 +779,10 @@ function App() {
           if (ownerId) setActiveId(ownerId);
           setView('profile');
         }}
-        onCompare={() => setView('compare')}
+        onCompare={openComparePage}
       />
-      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[320px_1fr] lg:px-8">
-        <aside className="space-y-4 lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
+      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 pb-24 sm:px-6 md:pb-5 lg:grid-cols-[320px_1fr] lg:px-8">
+        <aside className="order-2 space-y-4 lg:order-1 lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
           <LocationPanel
             location={location}
             onLocationChange={selectLocation}
@@ -785,7 +794,7 @@ function App() {
           <Filters level={level} setLevel={setLevel} office={office} setOffice={setOffice} topic={topic} setTopic={setTopic} />
         </aside>
 
-        <section className="min-w-0 space-y-4">
+        <section className="order-1 min-w-0 space-y-4 lg:order-2">
           <ContentModeToggle contentMode={contentMode} setContentMode={setContentMode} />
 
           {contentMode === 'feed' ? (
@@ -812,6 +821,7 @@ function App() {
                       setActiveId(politician.id);
                       setView('profile');
                     }}
+                    onOpenImage={setImageViewer}
                   />
                 ))}
                 {visibleFeedPosts.length === 0 && <EmptyState onReset={resetFeedFilters} />}
@@ -822,6 +832,7 @@ function App() {
           )}
         </section>
       </div>
+      <ImageViewer image={imageViewer} onClose={() => setImageViewer(null)} />
     </main>
   );
 }
@@ -839,15 +850,12 @@ function LandingPage({ politicianCode, setPoliticianCode, loginError, onCitizenE
               onClick={() => setIsCandidateLoginOpen(true)}
               className="rounded-full border border-ink/10 bg-ink px-5 py-2 text-sm font-black text-white shadow-lg shadow-ink/10 transition hover:bg-ink/90"
             >
-              ¿Eres un candidato?
+              Portal de candidatos
             </button>
           </div>
 
-          <div className="mx-auto max-w-3xl text-center py-10 sm:py-16">
-            <div className="inline-flex rounded-full border border-civic/25 bg-white px-4 py-1 text-xs font-black uppercase tracking-[0.2em] text-civic shadow-sm">
-              Plataforma pública de propuestas
-            </div>
-            <h1 className="mt-8 text-5xl font-black leading-tight tracking-[-0.03em] text-ink sm:text-6xl">
+          <div className="mx-auto max-w-3xl text-center py-10 sm:py-16 animate-fade-up">
+            <h1 className="mt-8 text-4xl font-black leading-tight tracking-[-0.03em] text-ink sm:text-5xl lg:text-6xl">
               El proyecto para la ciudadanía que quiere entender su elección local.
             </h1>
             <p className="mt-6 text-base leading-8 text-ink/70 sm:text-lg">
@@ -857,116 +865,11 @@ function LandingPage({ politicianCode, setPoliticianCode, loginError, onCitizenE
               <button
                 type="button"
                 onClick={onCitizenEnter}
-                className="rounded-full bg-civic px-10 py-4 text-base font-black text-white shadow-xl transition hover:bg-civic/90"
+                className="glow-pulse rounded-full bg-civic px-10 py-4 text-base font-black text-white shadow-xl transition hover:scale-105 hover:bg-civic/90"
               >
                 Acceder
               </button>
-              <button
-                type="button"
-                onClick={() => setIsCandidateLoginOpen(true)}
-                className="rounded-full border border-ink/10 bg-white px-10 py-4 text-base font-black text-ink shadow-sm transition hover:bg-ink/5"
-              >
-                Soy candidato
-              </button>
             </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-3xl border border-ink/10 bg-white p-6 text-left shadow-panel">
-              <p className="text-2xl font-black">Para la gente</p>
-              <p className="mt-3 text-sm leading-6 text-ink/70">
-                Explora propuestas por distrito sin iniciar sesión, sin publicidad y sin datos personales obligatorios.
-              </p>
-            </div>
-            <div className="rounded-3xl border border-ink/10 bg-white p-6 text-left shadow-panel">
-              <p className="text-2xl font-black">Para candidatos</p>
-              <p className="mt-3 text-sm leading-6 text-ink/70">
-                Reclama tu perfil con el código oficial y administra tus propuestas verificadas desde un acceso seguro.
-              </p>
-            </div>
-            <div className="rounded-3xl border border-ink/10 bg-white p-6 text-left shadow-panel">
-              <p className="text-2xl font-black">Transparencia local</p>
-              <p className="mt-3 text-sm leading-6 text-ink/70">
-                Visualiza agendas reales y conoce qué ofrecen quienes buscan tu voto, con contexto y datos electorales claros.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="rounded-[2rem] border border-ink/10 bg-white p-6 shadow-panel sm:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-civic">Acceso</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight text-ink sm:text-4xl">
-                Entra como ciudadano y comienza a explorar.
-              </h2>
-              <p className="mt-4 hidden text-sm leading-6 text-ink/70">
-                Los ciudadanos entran directamente para consultar información. Los candidatos usan su ID oficial para reclamar el perfil y trabajar propuestas verificadas.
-              </p>
-              <p className="mt-4 text-sm leading-6 text-ink/70">
-                Consulta informacion electoral sin crear cuenta, sin likes, sin comentarios y sin entregar datos personales adicionales.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-10">
-            <section className="rounded-3xl border border-ink/10 bg-ballot p-6">
-              <p className="text-xl font-black">Soy ciudadano</p>
-              <p className="mt-3 text-sm leading-6 text-ink/70">
-                Consulta candidatos, cargos y propuestas por ubicación sin registrar cuenta ni compartir datos personales extra.
-              </p>
-              <button
-                type="button"
-                onClick={onCitizenEnter}
-                className="mt-6 h-14 w-full rounded-full bg-civic text-base font-black text-white transition hover:bg-civic/90"
-              >
-                Acceder como ciudadano
-              </button>
-            </section>
-
-            <div className="hidden">
-            {false && (
-            <form
-              id="politician-login"
-              onSubmit={onPoliticianEnter}
-              className="rounded-3xl border border-ink/10 bg-ink p-6 text-white"
-            >
-              <p className="text-xl font-black">Soy político o candidato</p>
-              <p className="mt-3 text-sm leading-6 text-white/70">
-                Usa tu código oficial para acceder al registro de propuestas y mantener tu perfil verificado.
-              </p>
-              <label className="mt-6 block text-sm font-black uppercase tracking-[0.12em] text-white/60">
-                ID oficial
-                <input
-                  className="mt-3 h-14 w-full rounded-2xl border border-white/15 bg-white px-4 text-sm font-black text-ink outline-none focus:border-maize"
-                  value={politicianCode}
-                  onChange={(event) => setPoliticianCode(event.target.value)}
-                  placeholder="MX-NL-MTY-PRESMUN-0001"
-                />
-              </label>
-              {loginError && (
-                <p className="mt-4 rounded-2xl bg-signal/20 p-4 text-sm font-bold text-white">
-                  {loginError}
-                </p>
-              )}
-              <button className="mt-6 h-14 w-full rounded-full bg-maize text-base font-black text-ink transition hover:bg-maize/90">
-                Validar código
-              </button>
-            </form>
-            )}
-            </div>
-          </div>
-
-          <div className="mt-8 rounded-3xl border border-ink/10 bg-ballot p-6 text-sm leading-6 text-ink/70">
-            <p className="font-black">Consulta publica</p>
-            <p className="mt-2">
-              La ciudadania puede navegar por distrito, buscar candidaturas y usar IA para resumir o comparar informacion sin iniciar sesion.
-            </p>
-            <p className="mt-2 hidden">
-              El código oficial es para reclamar tu perfil inicial. En producción, el acceso debe continuar con un registro seguro, email/magic link o autenticación de dos factores.
-            </p>
           </div>
         </div>
       </section>
@@ -1029,22 +932,73 @@ function LandingMetric({ value, label }) {
 
 function Header({ entryMode, onReset, activePolitician, onFeed, onProfile, onCompare }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-ink/10 bg-ballot/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <a href="#" className="flex min-w-0 items-center gap-3 font-black">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-ink text-sm text-white">CD</span>
-          <span className="truncate">CyberDemocracia</span>
-        </a>
-        <nav className="hidden items-center gap-5 text-sm font-bold text-ink/62 md:flex">
-          <button className="hover:text-ink" onClick={onFeed}>Feed civico</button>
-          {entryMode === 'politician' && <button className="hover:text-ink" onClick={onProfile}>Perfil</button>}
-          {entryMode !== 'politician' && <button className="hover:text-ink" onClick={onCompare}>Comparar</button>}
-        </nav>
-        <button onClick={onReset} className="rounded-md border border-civic/25 bg-white px-3 py-2 text-xs font-black text-civic hover:bg-civic/10">
-          {entryMode === 'politician' ? `Politico: ${activePolitician.name}` : 'Modo ciudadano'}
-        </button>
-      </div>
-    </header>
+    <>
+      <header className="sticky top-0 z-30 border-b border-ink/10 bg-ballot/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <a href="#" className="flex min-w-0 items-center gap-3 font-black">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-ink text-sm text-white">CD</span>
+            <span className="truncate">CyberDemocracia</span>
+          </a>
+          <nav className="hidden items-center gap-5 text-sm font-bold text-ink/62 md:flex">
+            <button className="hover:text-ink" onClick={onFeed}>Feed civico</button>
+            {entryMode === 'politician' && <button className="hover:text-ink" onClick={onProfile}>Perfil</button>}
+            {entryMode !== 'politician' && <button className="hover:text-ink" onClick={onCompare}>Comparar</button>}
+          </nav>
+          <button onClick={onReset} className="rounded-md border border-civic/25 bg-white px-3 py-2 text-xs font-black text-civic hover:bg-civic/10">
+            {entryMode === 'politician' ? `Politico: ${activePolitician.name}` : 'Modo ciudadano'}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile bottom navigation */}
+      <nav className="mobile-nav-safe fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-ballot/95 backdrop-blur-sm md:hidden">
+        <div className="grid grid-cols-3 divide-x divide-ink/10">
+          <button
+            onClick={onFeed}
+            className="flex flex-col items-center gap-1 py-3 text-xs font-black text-ink/55 transition active:text-civic"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 5h18M3 10h18M3 15h12" />
+            </svg>
+            Feed
+          </button>
+          {entryMode === 'politician' ? (
+            <button
+              onClick={onProfile}
+              className="flex flex-col items-center gap-1 py-3 text-xs font-black text-ink/55 transition active:text-civic"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+              Perfil
+            </button>
+          ) : (
+            <button
+              onClick={onCompare}
+              className="flex flex-col items-center gap-1 py-3 text-xs font-black text-ink/55 transition active:text-civic"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="8" height="16" rx="1" />
+                <rect x="14" y="4" width="8" height="16" rx="1" />
+              </svg>
+              Comparar
+            </button>
+          )}
+          <button
+            onClick={onReset}
+            className="flex flex-col items-center gap-1 py-3 text-xs font-black text-ink/55 transition active:text-civic"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Salir
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }
 
@@ -1226,10 +1180,10 @@ function DistrictMap({ location }) {
     const districtBounds = buildMockDistrictPolygon(center, location);
     const districtPolygon = new window.google.maps.Polygon({
       paths: districtBounds,
-      strokeColor: '#0F766E',
+      strokeColor: '#6e36ad',
       strokeOpacity: 0.95,
       strokeWeight: 2,
-      fillColor: district?.color ?? '#0F766E',
+      fillColor: district?.color ?? '#6e36ad',
       fillOpacity: hasSection ? 0.34 : 0.18,
     });
 
@@ -1355,7 +1309,7 @@ function FeedHeader({ count, location, level, office, topic, searchQuery, search
   );
 }
 
-function PoliticianPost({ politician, post, active, onOpen }) {
+function PoliticianPost({ politician, post, active, onOpen, onOpenImage }) {
   const latestPost = post ?? politician.posts?.[0];
   const visibleTags = latestPost?.tags?.length ? latestPost.tags : politician.topics;
   const postTitle = latestPost?.title ?? 'Resumen del perfil';
@@ -1407,7 +1361,14 @@ function PoliticianPost({ politician, post, active, onOpen }) {
       </div>
 
       {latestPost?.imageUrl && (
-        <img className="mt-4 h-56 w-full rounded-lg border border-ink/10 object-cover" src={latestPost.imageUrl} alt={latestPost.title} />
+        <button
+          type="button"
+          onClick={() => onOpenImage?.({ src: latestPost.imageUrl, alt: latestPost.title, title: postTitle, subtitle: politician.name })}
+          className="group mt-4 block w-full overflow-hidden rounded-lg border border-ink/10 bg-ink/5 focus:outline-none focus:ring-2 focus:ring-civic/30"
+          aria-label={`Abrir imagen de ${postTitle} en pantalla completa`}
+        >
+          <img className="h-56 w-full object-cover transition duration-200 group-hover:scale-[1.02] group-hover:opacity-90" src={latestPost.imageUrl} alt={latestPost.title} />
+        </button>
       )}
 
       <div className="mt-4 space-y-3">
@@ -1418,8 +1379,7 @@ function PoliticianPost({ politician, post, active, onOpen }) {
           </div>
         ))}
       </div>
-      <footer className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3 text-xs font-bold text-ink/52">
-        <span>Fuente: {politician.source}</span>
+      <footer className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-ink/10 pt-3 text-xs font-bold text-ink/52">
         <span>Publicado: {postDate}</span>
       </footer>
       <ShareActions
@@ -1445,9 +1405,11 @@ function CandidateProfilePage({
   onAddPost,
   onUpdatePost,
   onDeletePost,
+  onOpenImage,
 }) {
   const [summaryStatus, setSummaryStatus] = useState('idle');
   const [aiSummary, setAiSummary] = useState('');
+  const partyColor = getPartyColor(politician);
 
   const generateCandidateSummary = async () => {
     setSummaryStatus('loading');
@@ -1484,15 +1446,15 @@ function CandidateProfilePage({
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <button onClick={onBack} className="rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-black hover:bg-ink/5">
+    <div className="mx-auto max-w-4xl px-4 py-5 pb-24 sm:px-6 md:pb-5 lg:px-8">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <button onClick={onBack} className="w-full rounded-md border border-ink/15 bg-white px-4 py-2.5 text-sm font-black hover:bg-ink/5 sm:w-auto">
           Volver al feed
         </button>
         <button
           onClick={generateCandidateSummary}
           disabled={summaryStatus === 'loading'}
-          className="rounded-md bg-signal px-4 py-2 text-sm font-black text-white transition hover:bg-signal/90 disabled:cursor-not-allowed disabled:bg-signal/50"
+          className="w-full rounded-md bg-signal px-4 py-2.5 text-sm font-black text-white transition hover:bg-signal/90 disabled:cursor-not-allowed disabled:bg-signal/50 sm:w-auto"
         >
           {summaryStatus === 'loading' ? 'Generando resumen...' : 'Resumen imparcial con IA'}
         </button>
@@ -1514,21 +1476,21 @@ function CandidateProfilePage({
       )}
 
       <section id="perfil" className="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-panel">
-        <div className="h-32 bg-ink sm:h-40" />
+        <div className="h-28 sm:h-36" style={{ backgroundColor: partyColor }} />
         <div className="px-4 pb-5 sm:px-6">
-          <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex items-end gap-4">
+          <div className="-mt-10 flex flex-col gap-3 sm:-mt-12">
+            <div>
               {politician.photoUrl ? (
-                <img className="h-24 w-24 rounded-lg border-4 border-white object-cover sm:h-28 sm:w-28" src={politician.photoUrl} alt={politician.name} />
+                <img className="h-24 w-24 rounded-lg border-4 border-white bg-white object-cover shadow-panel sm:h-28 sm:w-28" src={politician.photoUrl} alt={politician.name} />
               ) : (
-                <div className="grid h-24 w-24 rounded-lg border-4 border-white bg-civic text-2xl font-black text-white sm:h-28 sm:w-28">
+                <div className="grid h-24 w-24 rounded-lg border-4 border-white text-2xl font-black text-white shadow-panel sm:h-28 sm:w-28" style={{ backgroundColor: partyColor }}>
                   <span className="place-self-center">{politician.name.slice(0, 2).toUpperCase()}</span>
                 </div>
               )}
-              <div className="pb-1">
-                <h1 className="text-3xl font-black leading-tight">{politician.name}</h1>
-                <p className="mt-1 text-sm font-bold text-ink/55">{politician.party}</p>
-              </div>
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-black leading-tight sm:text-4xl">{politician.name}</h1>
+              <p className="mt-2 inline-flex rounded-md px-2 py-1 text-sm font-black text-white" style={{ backgroundColor: partyColor }}>{politician.party}</p>
             </div>
           </div>
 
@@ -1576,25 +1538,6 @@ function CandidateProfilePage({
       )}
 
       <section className="mt-5 rounded-lg border border-ink/10 bg-white p-4 shadow-panel">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-civic">Propuestas oficiales anteriores</p>
-        <div className="mt-4 space-y-3">
-          {politician.proposals.map((proposal, index) => (
-            <article key={`${politician.id}-proposal-page-${index}`} className="rounded-lg bg-ballot p-4">
-              <p className="text-sm font-black text-civic">{proposal.topic}</p>
-              <p className="mt-2 text-sm leading-6 text-ink/75">{proposal.text}</p>
-              <ShareActions
-                className="mt-3"
-                politicianId={politician.id}
-                contentId={`propuesta-${index + 1}`}
-                title={`Propuesta de ${politician.name} sobre ${proposal.topic}`}
-                text={`${proposal.text}\n\n${politician.name} | ${politician.office} | ${politician.party}`}
-              />
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-5 rounded-lg border border-ink/10 bg-white p-4 shadow-panel">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-signal">Publicaciones y propuestas</p>
         <div className="mt-4 space-y-3">
           {(politician.posts ?? []).length === 0 && <p className="rounded-lg bg-ballot p-4 text-sm font-bold text-ink/58">Aun no hay publicaciones.</p>}
@@ -1604,23 +1547,71 @@ function CandidateProfilePage({
                 <span className="rounded-md bg-civic/10 px-2 py-1 text-xs font-black text-civic">{post.type ?? 'Publicacion'}</span>
                 {(post.tags ?? []).map((tag) => <Tag key={`${post.title}-${tag}`}>{tag}</Tag>)}
               </div>
-              <p className="mt-3 text-lg font-black">{post.title}</p>
+              {post.title && <p className="mt-3 text-lg font-black">{post.title}</p>}
               <p className="mt-1 text-xs font-bold text-ink/45">{post.createdAt}</p>
               {post.imageUrl && (
-                <img className="mt-3 max-h-96 w-full rounded-lg object-cover" src={post.imageUrl} alt={post.title} />
+                <button
+                  type="button"
+                  onClick={() => onOpenImage?.({ src: post.imageUrl, alt: post.title || 'Imagen de publicacion', title: post.title || 'Publicacion', subtitle: politician.name })}
+                  className="group mt-3 block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-civic/30"
+                  aria-label={`Abrir imagen de ${post.title || 'publicacion'} en pantalla completa`}
+                >
+                  <img className="max-h-96 w-full object-cover transition duration-200 group-hover:scale-[1.01] group-hover:opacity-90" src={post.imageUrl} alt={post.title || 'Imagen de publicacion'} />
+                </button>
               )}
               <p className="mt-3 text-sm leading-6 text-ink/72">{post.body}</p>
               <ShareActions
                 className="mt-3"
                 politicianId={politician.id}
                 contentId={`publicacion-${index + 1}`}
-                title={`${post.title} - ${politician.name}`}
+                title={`${post.title || 'Publicacion'} - ${politician.name}`}
                 text={`${post.body}\n\n${politician.name} | ${politician.office} | ${politician.party}`}
               />
             </article>
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ImageViewer({ image, onClose }) {
+  useEffect(() => {
+    if (!image) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [image, onClose]);
+
+  if (!image) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-ink/90 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label={image.title || 'Imagen de publicacion'}>
+      <button className="absolute inset-0 cursor-zoom-out" type="button" aria-label="Cerrar imagen" onClick={onClose} />
+      <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col">
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-lg bg-white/95 px-4 py-3 text-ink shadow-panel">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black">{image.title || 'Imagen de publicacion'}</p>
+            {image.subtitle && <p className="mt-0.5 truncate text-xs font-bold text-ink/55">{image.subtitle}</p>}
+          </div>
+          <button type="button" onClick={onClose} className="rounded-md border border-ink/15 px-3 py-2 text-sm font-black transition hover:bg-ink hover:text-white">
+            Cerrar
+          </button>
+        </div>
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg bg-black/35">
+          <img className="h-full w-full object-contain" src={image.src} alt={image.alt || image.title || 'Imagen de publicacion'} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -1683,7 +1674,7 @@ function ComparePage({ politicians, selectedPoliticians, selectedIds, onToggle, 
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-5 pb-24 sm:px-6 md:pb-5 lg:px-8">
       <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-panel">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -1699,9 +1690,9 @@ function ComparePage({ politicians, selectedPoliticians, selectedIds, onToggle, 
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_180px_220px_180px]">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_180px_220px_180px]">
           <input
-            className="h-11 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
+            className="h-11 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic sm:col-span-2 lg:col-span-1"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar por nombre, ciudad, partido, cargo o propuesta"
@@ -1712,7 +1703,7 @@ function ComparePage({ politicians, selectedPoliticians, selectedIds, onToggle, 
           <select className="h-11 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic" value={officeFilter} onChange={(event) => setOfficeFilter(event.target.value)}>
             {offices.map((item) => <option key={item}>{item}</option>)}
           </select>
-          <select className="h-11 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic" value={topicFilter} onChange={(event) => setTopicFilter(event.target.value)}>
+          <select className="h-11 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic sm:col-span-2 lg:col-span-1" value={topicFilter} onChange={(event) => setTopicFilter(event.target.value)}>
             {topics.map((item) => <option key={item}>{item}</option>)}
           </select>
         </div>
@@ -1741,7 +1732,7 @@ function ComparePage({ politicians, selectedPoliticians, selectedIds, onToggle, 
           <button
             onClick={() => setIsModalOpen(true)}
             disabled={selectedPoliticians.length !== 2}
-            className="h-11 rounded-md bg-signal px-4 text-sm font-black text-white transition hover:bg-signal/90 disabled:cursor-not-allowed disabled:bg-signal/40"
+            className="h-11 w-full rounded-md bg-signal px-4 text-sm font-black text-white transition hover:bg-signal/90 disabled:cursor-not-allowed disabled:bg-signal/40 lg:w-auto"
           >
             Analizar con IA
           </button>
@@ -1777,8 +1768,12 @@ function ComparePage({ politicians, selectedPoliticians, selectedIds, onToggle, 
 }
 
 function CompareCandidateCard({ politician, selected, disabled, onSelect, onOpen }) {
+  const partyColor = getPartyColor(politician);
+
   return (
-    <article className={`rounded-lg border bg-white p-4 shadow-panel transition hover:-translate-y-0.5 hover:shadow-panel ${selected ? 'border-civic ring-2 ring-civic/20' : 'border-ink/10'} ${disabled ? 'opacity-50' : ''}`}>
+    <article className={`overflow-hidden rounded-lg border bg-white shadow-panel transition hover:-translate-y-0.5 hover:shadow-panel ${selected ? 'border-civic ring-2 ring-civic/20' : 'border-ink/10'} ${disabled ? 'opacity-50' : ''}`}>
+      <div className="h-2" style={{ backgroundColor: partyColor }} />
+      <div className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap gap-2">
@@ -1786,7 +1781,7 @@ function CompareCandidateCard({ politician, selected, disabled, onSelect, onOpen
             <Tag>{politician.office}</Tag>
           </div>
           <h2 className="mt-3 text-xl font-black">{politician.name}</h2>
-          <p className="mt-1 text-sm font-bold text-ink/55">{politician.party}</p>
+          <p className="mt-1 inline-flex rounded-md px-2 py-1 text-xs font-black text-white" style={{ backgroundColor: partyColor }}>{politician.party}</p>
           <p className="mt-1 text-xs font-bold text-ink/45">{politician.municipality}, {politician.state}</p>
         </div>
       </div>
@@ -1795,7 +1790,7 @@ function CompareCandidateCard({ politician, selected, disabled, onSelect, onOpen
         {politician.topics.slice(0, 3).map((topic) => <Tag key={topic}>{topic}</Tag>)}
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <button onClick={onOpen} className="h-10 rounded-md border border-ink/15 text-sm font-black hover:bg-ink/5">Ver perfil</button>
+        <button onClick={onOpen} className="h-10 rounded-md border border-ink/15 text-sm font-black hover:bg-ink/5 active:bg-ink/10">Ver perfil</button>
         <button
           onClick={onSelect}
           disabled={disabled}
@@ -1803,6 +1798,7 @@ function CompareCandidateCard({ politician, selected, disabled, onSelect, onOpen
         >
           {selected ? 'Seleccionado' : 'Seleccionar'}
         </button>
+      </div>
       </div>
     </article>
   );
@@ -1975,7 +1971,11 @@ function PoliticianAdminPanel({
 
   const savePost = (event) => {
     event.preventDefault();
-    if (!postDraft.title.trim() || !postDraft.body.trim()) return;
+    if (!postDraft.body.trim()) {
+      setPostMessageType('error');
+      setPostMessage('La publicacion necesita contenido.');
+      return;
+    }
     setIsSavingPost(true);
     setPostMessageType('success');
     setPostMessage('Guardando publicacion en la base de datos...');
@@ -2124,7 +2124,7 @@ function PoliticianAdminPanel({
             className="h-10 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
             value={postDraft.title}
             onChange={(event) => setPostDraft((draft) => ({ ...draft, title: event.target.value }))}
-            placeholder="Titulo"
+            placeholder="Titulo opcional"
           />
           <textarea
             className="min-h-24 resize-none rounded-md border border-ink/15 bg-ballot p-3 text-sm leading-6 outline-none focus:border-civic"
@@ -2294,6 +2294,7 @@ function EditablePost({ post, onSave, onDelete }) {
   }, [post]);
 
   const saveDraft = () => {
+    if (!draft.body?.trim()) return;
     const { topic, ...rest } = draft;
     onSave({ ...rest, tags: topic === 'Sin tema' ? [] : [topic] });
   };
@@ -2323,8 +2324,9 @@ function EditablePost({ post, onSave, onDelete }) {
       </select>
       <input
         className="mt-2 h-10 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
-        value={draft.title}
+        value={draft.title ?? ''}
         onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+        placeholder="Titulo opcional"
       />
       <textarea
         className="mt-2 min-h-24 w-full resize-none rounded-md border border-ink/15 bg-ballot p-3 text-sm leading-6 outline-none focus:border-civic"
@@ -2336,7 +2338,7 @@ function EditablePost({ post, onSave, onDelete }) {
       </div>
       <div className="mt-2 rounded-lg border border-ink/10 p-3">
         <p className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Imagen</p>
-        {draft.imageUrl && <img className="mt-2 max-h-44 w-full rounded-md object-cover" src={draft.imageUrl} alt={draft.title} />}
+        {draft.imageUrl && <img className="mt-2 max-h-44 w-full rounded-md object-cover" src={draft.imageUrl} alt={draft.title || 'Imagen de publicacion'} />}
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <label className="cursor-pointer rounded-md bg-civic/10 px-3 py-2 text-xs font-black text-civic hover:bg-civic/20">
             <input className="sr-only" type="file" accept="image/*" onChange={handleImageFile} />
@@ -2447,14 +2449,14 @@ function CivicChatbot({ location }) {
         </p>
       </div>
 
-      <div className="bg-gradient-to-b from-ballot/70 to-white p-4">
-        <div className="flex flex-wrap gap-2">
+      <div className="bg-gradient-to-b from-ballot/70 to-white px-4 py-3">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
           {quickPrompts.map((prompt) => (
             <button
               key={prompt}
               type="button"
               onClick={() => setMessage(prompt)}
-              className="rounded-full border border-ink/10 bg-white px-3 py-2 text-xs font-black text-ink/62 transition hover:-translate-y-0.5 hover:border-civic/35 hover:text-civic hover:shadow-panel"
+              className="shrink-0 rounded-full border border-ink/10 bg-white px-3 py-2 text-xs font-black text-ink/62 transition hover:-translate-y-0.5 hover:border-civic/35 hover:text-civic hover:shadow-panel"
             >
               {prompt}
             </button>
@@ -2492,7 +2494,7 @@ function CivicChatbot({ location }) {
             placeholder="Escribe una pregunta sobre candidaturas, propuestas, temas o ciudades..."
           />
           <div className="flex items-center justify-between gap-3 border-t border-ink/10 pt-2">
-            <p className="text-xs font-bold text-ink/45">Usa lenguaje natural. Ej. "quienes hablan de salud"</p>
+            <p className="hidden text-xs font-bold text-ink/45 sm:block">Usa lenguaje natural. Ej. "quienes hablan de salud"</p>
             <button
               disabled={chatStatus === 'loading' || !message.trim()}
               className="h-10 shrink-0 rounded-md bg-signal px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-signal/90 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-signal/45"
@@ -2579,48 +2581,50 @@ function ShareActions({ politicianId, contentId, title, text, className = '' }) 
   };
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 border-t border-ink/10 pt-3 ${className}`}>
+    <div className={`border-t border-ink/10 pt-3 ${className}`}>
       <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Compartir</span>
-      <button onClick={nativeShare} className="rounded-md bg-ink px-3 py-2 text-xs font-black text-white transition hover:bg-ink/90">
-        Sistema
-      </button>
-      <a
-        className="rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
-        href={`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`}
-        target="_blank"
-        rel="noreferrer"
-      >
-        X
-      </a>
-      <a
-        className="rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
-        href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
-        target="_blank"
-        rel="noreferrer"
-      >
-        Facebook
-      </a>
-      <a
-        className="rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
-        href={`https://wa.me/?text=${encodedTextWithUrl}`}
-        target="_blank"
-        rel="noreferrer"
-      >
-        WhatsApp
-      </a>
-      <button
-        onClick={() => copyValue(`${shareText}\n\n${shareUrl}`, 'Texto copiado para Instagram')}
-        className="rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
-      >
-        Instagram
-      </button>
-      <button
-        onClick={() => copyValue(shareUrl, 'URL copiada')}
-        className="rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
-      >
-        Copiar URL
-      </button>
-      {copied && <span className="text-xs font-black text-civic">{copied}</span>}
+      <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+        <button onClick={nativeShare} className="shrink-0 rounded-md bg-ink px-3 py-2 text-xs font-black text-white transition hover:bg-ink/90 active:scale-95">
+          Sistema
+        </button>
+        <a
+          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+          href={`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          X
+        </a>
+        <a
+          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+          href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Facebook
+        </a>
+        <a
+          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+          href={`https://wa.me/?text=${encodedTextWithUrl}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          WhatsApp
+        </a>
+        <button
+          onClick={() => copyValue(`${shareText}\n\n${shareUrl}`, 'Texto copiado para Instagram')}
+          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+        >
+          Instagram
+        </button>
+        <button
+          onClick={() => copyValue(shareUrl, 'URL copiada')}
+          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+        >
+          Copiar URL
+        </button>
+        {copied && <span className="shrink-0 text-xs font-black text-civic">{copied}</span>}
+      </div>
     </div>
   );
 }
@@ -2649,6 +2653,7 @@ function mapSupabasePolitician(row) {
     gender: row.gender ?? '',
     name: row.name ?? 'Perfil sin nombre',
     party: row.party ?? 'Sin partido',
+    partyColor: row.party_color_hex ?? '',
     office: row.office ?? 'Cargo no definido',
     level: row.level ?? 'Federal',
     state: row.state ?? '',
@@ -2664,7 +2669,7 @@ function mapSupabasePolitician(row) {
     })),
     posts: posts.map((post) => ({
       id: post.id ?? '',
-      title: post.title ?? 'Publicacion',
+      title: post.title ?? '',
       body: post.body ?? '',
       type: post.type ?? 'Publicacion',
       tags: Array.isArray(post.tags) ? post.tags : [],
@@ -2689,6 +2694,24 @@ function getPostTime(post, politician) {
   const value = post?.createdAtIso || post?.createdAt || politician?.updatedAt;
   const timestamp = Date.parse(value);
   return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function getPartyColor(politician) {
+  if (isHexColor(politician?.partyColor)) return politician.partyColor;
+
+  const normalizedParty = normalizeText(politician?.party);
+  if (normalizedParty.includes('morado')) return '#8B5CF6';
+  if (normalizedParty.includes('azul')) return '#1E90FF';
+  if (normalizedParty.includes('verde')) return '#89CC04';
+  if (normalizedParty.includes('rosa')) return '#FFB7C5';
+  if (normalizedParty.includes('rojo')) return '#DC143C';
+  if (normalizedParty.includes('negro')) return '#0A0A0F';
+
+  return '#0A0A0F';
+}
+
+function isHexColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(String(value ?? '').trim());
 }
 
 function parseTags(value) {
