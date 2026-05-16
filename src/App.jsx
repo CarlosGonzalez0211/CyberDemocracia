@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { chihuahuaLocalDistricts } from './data/chihuahuaDistricts';
+import { electoralCatalog, mexicoStates } from './data/electoralCatalog';
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://127.0.0.1:8787' : '');
@@ -285,7 +286,42 @@ const locationPresets = [
 ];
 
 const levels = ['Todos', 'Federal', 'Estatal', 'Municipal', 'Judicial'];
-const offices = ['Todos los cargos', 'Gubernatura', 'Senaduria', 'Diputacion federal', 'Diputacion local', 'Presidencia municipal', 'Regiduria', 'Magistratura'];
+const officesByLevel = {
+  Todos: [
+    'Todos los cargos',
+    'Presidencia de la Republica',
+    'Senaduria',
+    'Diputacion federal',
+    'Gubernatura',
+    'Diputacion local',
+    'Presidencia municipal',
+    'Sindicatura',
+    'Regiduria',
+    'Alcaldia',
+    'Junta municipal',
+    'Ministratura SCJN',
+    'Magistratura del Tribunal Electoral',
+    'Magistratura del Tribunal de Disciplina Judicial',
+    'Magistratura de Circuito',
+    'Juzgado de Distrito',
+    'Magistratura local',
+    'Juzgado local',
+  ],
+  Federal: ['Todos los cargos', 'Presidencia de la Republica', 'Senaduria', 'Diputacion federal'],
+  Estatal: ['Todos los cargos', 'Gubernatura', 'Diputacion local'],
+  Municipal: ['Todos los cargos', 'Presidencia municipal', 'Sindicatura', 'Regiduria', 'Alcaldia', 'Junta municipal'],
+  Judicial: [
+    'Todos los cargos',
+    'Ministratura SCJN',
+    'Magistratura del Tribunal Electoral',
+    'Magistratura del Tribunal de Disciplina Judicial',
+    'Magistratura de Circuito',
+    'Juzgado de Distrito',
+    'Magistratura local',
+    'Juzgado local',
+  ],
+};
+const offices = officesByLevel.Todos;
 const publicationTopicOptions = [
   'Sin tema',
   'Economia',
@@ -301,9 +337,18 @@ const publicationTopicOptions = [
 ];
 const topics = ['Todos', ...publicationTopicOptions.filter((topic) => topic !== 'Sin tema')];
 const editableTopics = publicationTopicOptions.filter((topic) => topic !== 'Sin tema');
+const partyCatalog = [
+  { name: 'Intuicion Mistica', shortName: 'IM', color: '#6A0DAD', description: 'Partido de identidad mistica, espiritual y profunda.' },
+  { name: 'Alianza Coquette', shortName: 'AC', color: '#FFB7C5', description: 'Partido de identidad estetica, ordenada y comunitaria.' },
+  { name: 'Partido Salvando Mexico', shortName: 'PSM', color: '#DC143C', description: 'Partido de identidad intensa, pasional y rebelde.' },
+  { name: "Partidon't Care", shortName: 'PDC', color: '#89CC04', description: 'Partido de identidad disruptiva, electrica y juvenil.' },
+  { name: 'Union Malaventurada', shortName: 'PUM', color: '#0A0A0F', description: 'Partido de identidad melancolica, sobria y profunda.' },
+  { name: 'Amor Eterno por Chihuahua', shortName: 'AEC', color: '#1E90FF', description: 'Partido de identidad alegre, brillante y chihuahuense.' },
+];
 
 function App() {
   const [politicians, setPoliticians] = useState(mockPoliticians);
+  const [parties, setParties] = useState(partyCatalog);
   const [dataStatus, setDataStatus] = useState(isSupabaseConfigured ? 'Conectando a Supabase' : 'Demo local');
   const [entryMode, setEntryMode] = useState(null);
   const [view, setView] = useState('feed');
@@ -323,6 +368,18 @@ function App() {
   const [ownerId, setOwnerId] = useState(null);
   const [handledSharedLink, setHandledSharedLink] = useState(false);
   const [imageViewer, setImageViewer] = useState(null);
+  const [isCandidatePortalOpen, setIsCandidatePortalOpen] = useState(false);
+  const [isPartyAdminOpen, setIsPartyAdminOpen] = useState(false);
+  const [partyAdminUnlocked, setPartyAdminUnlocked] = useState(false);
+  const availableOffices = officesByLevel[level] ?? officesByLevel.Todos;
+
+  const openProfileAtTop = (id) => {
+    setActiveId(id);
+    setView('profile');
+    if (typeof window !== 'undefined' && window.scrollTo) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -363,6 +420,38 @@ function App() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadParties() {
+      try {
+        const response = await fetchWithTimeout(getApiUrl('/api/parties'), {}, 6000);
+        const payload = await parseApiPayload(response);
+        if (!cancelled && payload.parties?.length) {
+          setParties(mergeParties(payload.parties));
+        }
+      } catch {
+        if (!cancelled) setParties(mergeParties([]));
+      }
+    }
+
+    if (apiBaseUrl) {
+      loadParties();
+    } else {
+      setParties(mergeParties([]));
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [politicians.length]);
+
+  useEffect(() => {
+    if (!availableOffices.includes(office)) {
+      setOffice('Todos los cargos');
+    }
+  }, [availableOffices, office]);
+
+  useEffect(() => {
     if (handledSharedLink || entryMode || typeof window === 'undefined') return;
 
     const profileId = new URLSearchParams(window.location.search).get('perfil');
@@ -389,14 +478,14 @@ function App() {
       const sameState = politician.state === location.state;
       const sameMunicipality = allStateSelected || politician.municipality === location.municipality || isStateWide;
       const sameFederalDistrict =
-        !location.electoralSection ||
+        !location.federalDistrictFilter ||
         politician.level !== 'Federal' ||
         politician.office !== 'Diputacion federal' ||
         isDemoDistrict(politician.federalDistrict) ||
         politician.federalDistrict === location.federalDistrict ||
         politician.federalDistrict === 'Circunscripcion estatal';
       const sameLocalDistrict =
-        !location.electoralSection ||
+        !location.localDistrictFilter ||
         politician.level !== 'Estatal' ||
         isDemoDistrict(politician.localDistrict) ||
         politician.localDistrict === location.localDistrict ||
@@ -456,6 +545,117 @@ function App() {
     resetFeedFilters();
   };
 
+  const selectElectoralState = (state) => {
+    const catalog = electoralCatalog[state];
+    setSectionQuery('');
+    setSectionError('');
+
+    if (!catalog) {
+      setLocation({
+        label: state,
+        state,
+        municipality: 'Todo el estado',
+        federalDistrict: 'Cartografia pendiente',
+        localDistrict: 'Cartografia pendiente',
+        lat: 23.6345,
+        lng: -102.5528,
+      });
+      resetFeedFilters();
+      return;
+    }
+
+    setLocation({
+      label: `Todo ${state}`,
+      state,
+      municipality: 'Todo el estado',
+      federalDistrict: 'Todos los distritos federales',
+      localDistrict: 'Todos los distritos locales',
+      lat: 28.633,
+      lng: -106.0691,
+    });
+    resetFeedFilters();
+  };
+
+  const selectElectoralMunicipality = (municipalityName) => {
+    const catalog = electoralCatalog[location.state];
+    if (!catalog) return;
+
+    const municipality = catalog.municipalities.find((item) => item.name === municipalityName);
+    setSectionQuery('');
+    setSectionError('');
+
+    if (!municipality || municipalityName === 'Todo el estado') {
+      setLocation({
+        label: `Todo ${location.state}`,
+        state: location.state,
+        municipality: 'Todo el estado',
+        federalDistrict: 'Todos los distritos federales',
+        localDistrict: 'Todos los distritos locales',
+        lat: 28.633,
+        lng: -106.0691,
+      });
+      resetFeedFilters();
+      return;
+    }
+
+    const localDistrict = catalog.localDistricts.find((district) => district.number === municipality.localDistricts[0]);
+    const federalDistrict = catalog.federalDistricts.find((district) => district.number === municipality.federalDistricts[0]);
+    const localLabel = municipality.localDistricts.length === 1 ? localDistrict?.label : `${municipality.localDistricts.length} distritos locales`;
+    const federalLabel = municipality.federalDistricts.length === 1 ? federalDistrict?.label : `${municipality.federalDistricts.length} distritos federales`;
+
+    setLocation({
+      label: `${municipality.name}, ${location.state}`,
+      state: location.state,
+      municipality: municipality.name,
+      federalDistrict: federalLabel ?? 'Distrito federal pendiente',
+      localDistrict: localLabel ?? 'Distrito local pendiente',
+      localDistrictNumber: '',
+      federalDistrictNumber: '',
+      lat: 28.633,
+      lng: -106.0691,
+    });
+    resetFeedFilters();
+  };
+
+  const selectElectoralDistrict = (districtType, districtNumber) => {
+    const catalog = electoralCatalog[location.state];
+    if (!catalog) return;
+
+    if (!districtNumber) {
+      setLocation((current) => ({
+        ...current,
+        federalDistrict: districtType === 'federal' ? 'Todos los distritos federales' : current.federalDistrict,
+        localDistrict: districtType === 'local' ? 'Todos los distritos locales' : current.localDistrict,
+        federalDistrictNumber: districtType === 'federal' ? '' : current.federalDistrictNumber,
+        localDistrictNumber: districtType === 'local' ? '' : current.localDistrictNumber,
+        federalDistrictHead: districtType === 'federal' ? '' : current.federalDistrictHead,
+        localDistrictHead: districtType === 'local' ? '' : current.localDistrictHead,
+        federalDistrictFilter: districtType === 'federal' ? false : current.federalDistrictFilter,
+        localDistrictFilter: districtType === 'local' ? false : current.localDistrictFilter,
+      }));
+      resetFeedFilters();
+      return;
+    }
+
+    const districtList = districtType === 'local' ? catalog.localDistricts : catalog.federalDistricts;
+    const district = districtList.find((item) => item.number === districtNumber);
+    if (!district) return;
+
+    setLocation((current) => ({
+      ...current,
+      label: `${district.label} - ${current.municipality === 'Todo el estado' ? current.state : current.municipality}`,
+      federalDistrict: districtType === 'federal' ? district.label : current.federalDistrict,
+      localDistrict: districtType === 'local' ? district.label : current.localDistrict,
+      federalDistrictNumber: districtType === 'federal' ? district.number : current.federalDistrictNumber,
+      localDistrictNumber: districtType === 'local' ? district.number : current.localDistrictNumber,
+      federalDistrictHead: districtType === 'federal' ? district.head : current.federalDistrictHead,
+      localDistrictHead: districtType === 'local' ? district.head : current.localDistrictHead,
+      federalDistrictFilter: districtType === 'federal' ? true : current.federalDistrictFilter,
+      localDistrictFilter: districtType === 'local' ? true : current.localDistrictFilter,
+    }));
+    resetFeedFilters();
+  };
+
   const resetFeedFilters = () => {
     setLevel('Todos');
     setOffice('Todos los cargos');
@@ -487,6 +687,8 @@ function App() {
       federalDistrictHead: sectionData.federalDistrictHead,
       electoralSection: sectionData.section,
       sectionType: sectionData.sectionType,
+      federalDistrictFilter: true,
+      localDistrictFilter: true,
       lat: district?.lat ?? 28.633,
       lng: district?.lng ?? -106.0691,
     });
@@ -498,6 +700,7 @@ function App() {
   const enterAsCitizen = () => {
     setEntryMode('citizen');
     setView('feed');
+    setContentMode('feed');
     setLoginError('');
   };
 
@@ -516,6 +719,47 @@ function App() {
     setEntryMode('politician');
     setView('profile');
     setLoginError('');
+    setIsCandidatePortalOpen(false);
+  };
+
+  const goLanding = () => {
+    setEntryMode(null);
+    setView('feed');
+    setContentMode('feed');
+    setOwnerId(null);
+    setLoginError('');
+    setIsCandidatePortalOpen(false);
+  };
+
+  const openFeed = () => {
+    setView('feed');
+    setContentMode('feed');
+  };
+
+  const openChat = () => {
+    setView('feed');
+    setContentMode('chat');
+  };
+
+  const saveParty = async (party, password) => {
+    const method = party.id ? 'PUT' : 'POST';
+    const path = party.id ? `/api/parties/${party.id}` : '/api/parties';
+    const response = await fetchWithTimeout(getApiUrl(path), {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, party }),
+    });
+    const payload = await parseApiPayload(response);
+    if (!payload.party) throw new Error('El servidor no regreso el partido guardado.');
+    setParties((current) => mergeParties([payload.party, ...current]));
+    setPoliticians((current) =>
+      current.map((politician) =>
+        normalizeText(politician.party) === normalizeText(payload.party.name)
+          ? { ...politician, party: payload.party.name, partyColor: payload.party.color }
+          : politician,
+      ),
+    );
+    return payload.party;
   };
 
   const updatePoliticianProfile = async (id, updates) => {
@@ -711,14 +955,22 @@ function App() {
       <main className="min-h-screen bg-ballot text-ink">
         <Header
           entryMode={entryMode}
-          onReset={() => setEntryMode(null)}
+          view={view}
+          contentMode={contentMode}
+          onLogo={goLanding}
+          onPortal={() => setIsCandidatePortalOpen(true)}
           activePolitician={activePolitician}
-          onFeed={() => setView('feed')}
+          onFeed={openFeed}
+          onChat={openChat}
           onProfile={() => {
-            if (ownerId) setActiveId(ownerId);
-            setView('profile');
+            if (ownerId) {
+              openProfileAtTop(ownerId);
+            } else {
+              setView('profile');
+            }
           }}
           onCompare={openComparePage}
+          onPartyAdmin={() => setIsPartyAdminOpen(true)}
         />
         <CandidateProfilePage
           politician={activePolitician}
@@ -733,8 +985,27 @@ function App() {
           onUpdatePost={(index, post) => updatePoliticianPost(activePolitician.id, index, post)}
           onDeletePost={(index) => deletePoliticianPost(activePolitician.id, index)}
           onOpenImage={setImageViewer}
+          parties={parties}
         />
         <ImageViewer image={imageViewer} onClose={() => setImageViewer(null)} />
+        {isCandidatePortalOpen && (
+          <CandidatePortalModal
+            politicianCode={politicianCode}
+            setPoliticianCode={setPoliticianCode}
+            loginError={loginError}
+            onPoliticianEnter={enterAsPolitician}
+            onClose={() => setIsCandidatePortalOpen(false)}
+          />
+        )}
+        {isPartyAdminOpen && (
+          <PartyAdminModal
+            parties={parties}
+            unlocked={partyAdminUnlocked}
+            setUnlocked={setPartyAdminUnlocked}
+            onSave={saveParty}
+            onClose={() => setIsPartyAdminOpen(false)}
+          />
+        )}
       </main>
     );
   }
@@ -744,14 +1015,22 @@ function App() {
       <main className="min-h-screen bg-ballot text-ink">
         <Header
           entryMode={entryMode}
-          onReset={() => setEntryMode(null)}
+          view={view}
+          contentMode={contentMode}
+          onLogo={goLanding}
+          onPortal={() => setIsCandidatePortalOpen(true)}
           activePolitician={activePolitician}
-          onFeed={() => setView('feed')}
+          onFeed={openFeed}
+          onChat={openChat}
           onProfile={() => {
-            if (ownerId) setActiveId(ownerId);
-            setView('profile');
+            if (ownerId) {
+              openProfileAtTop(ownerId);
+            } else {
+              setView('profile');
+            }
           }}
           onCompare={openComparePage}
+          onPartyAdmin={() => setIsPartyAdminOpen(true)}
         />
         <ComparePage
           politicians={politicians}
@@ -759,11 +1038,28 @@ function App() {
           selectedIds={selectedIds}
           onToggle={toggleCompare}
           onOpenProfile={(id) => {
-            setActiveId(id);
-            setView('profile');
+            openProfileAtTop(id);
           }}
         />
         <ImageViewer image={imageViewer} onClose={() => setImageViewer(null)} />
+        {isCandidatePortalOpen && (
+          <CandidatePortalModal
+            politicianCode={politicianCode}
+            setPoliticianCode={setPoliticianCode}
+            loginError={loginError}
+            onPoliticianEnter={enterAsPolitician}
+            onClose={() => setIsCandidatePortalOpen(false)}
+          />
+        )}
+        {isPartyAdminOpen && (
+          <PartyAdminModal
+            parties={parties}
+            unlocked={partyAdminUnlocked}
+            setUnlocked={setPartyAdminUnlocked}
+            onSave={saveParty}
+            onClose={() => setIsPartyAdminOpen(false)}
+          />
+        )}
       </main>
     );
   }
@@ -772,31 +1068,39 @@ function App() {
     <main className="min-h-screen bg-ballot text-ink">
       <Header
         entryMode={entryMode}
-        onReset={() => setEntryMode(null)}
+        view={view}
+        contentMode={contentMode}
+        onLogo={goLanding}
+        onPortal={() => setIsCandidatePortalOpen(true)}
         activePolitician={activePolitician}
-        onFeed={() => setView('feed')}
+        onFeed={openFeed}
+        onChat={openChat}
         onProfile={() => {
-          if (ownerId) setActiveId(ownerId);
-          setView('profile');
+          if (ownerId) {
+            openProfileAtTop(ownerId);
+          } else {
+            setView('profile');
+          }
         }}
         onCompare={openComparePage}
+        onPartyAdmin={() => setIsPartyAdminOpen(true)}
       />
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 pb-24 sm:px-6 md:pb-5 lg:grid-cols-[320px_1fr] lg:px-8">
         <aside className="order-2 space-y-4 lg:order-1 lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
           <LocationPanel
             location={location}
-            onLocationChange={selectLocation}
+            onStateChange={selectElectoralState}
+            onMunicipalityChange={selectElectoralMunicipality}
+            onDistrictChange={selectElectoralDistrict}
             sectionQuery={sectionQuery}
             setSectionQuery={setSectionQuery}
             sectionError={sectionError}
             onSectionSearch={searchElectoralSection}
           />
-          <Filters level={level} setLevel={setLevel} office={office} setOffice={setOffice} topic={topic} setTopic={setTopic} />
+          <Filters level={level} setLevel={setLevel} office={office} setOffice={setOffice} topic={topic} setTopic={setTopic} availableOffices={availableOffices} />
         </aside>
 
         <section className="order-1 min-w-0 space-y-4 lg:order-2">
-          <ContentModeToggle contentMode={contentMode} setContentMode={setContentMode} />
-
           {contentMode === 'feed' ? (
             <>
               <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchScope={searchScope} setSearchScope={setSearchScope} />
@@ -817,10 +1121,9 @@ function App() {
                     post={post}
                     selected={selectedIds.includes(politician.id)}
                     active={activePolitician.id === politician.id}
-                    onOpen={() => {
-                      setActiveId(politician.id);
-                      setView('profile');
-                    }}
+                              onOpen={() => {
+                                openProfileAtTop(politician.id);
+                              }}
                     onOpenImage={setImageViewer}
                   />
                 ))}
@@ -833,6 +1136,24 @@ function App() {
         </section>
       </div>
       <ImageViewer image={imageViewer} onClose={() => setImageViewer(null)} />
+      {isCandidatePortalOpen && (
+        <CandidatePortalModal
+          politicianCode={politicianCode}
+          setPoliticianCode={setPoliticianCode}
+          loginError={loginError}
+          onPoliticianEnter={enterAsPolitician}
+          onClose={() => setIsCandidatePortalOpen(false)}
+        />
+      )}
+      {isPartyAdminOpen && (
+        <PartyAdminModal
+          parties={parties}
+          unlocked={partyAdminUnlocked}
+          setUnlocked={setPartyAdminUnlocked}
+          onSave={saveParty}
+          onClose={() => setIsPartyAdminOpen(false)}
+        />
+      )}
     </main>
   );
 }
@@ -875,49 +1196,195 @@ function LandingPage({ politicianCode, setPoliticianCode, loginError, onCitizenE
       </section>
 
       {isCandidateLoginOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/60 px-4 py-6 backdrop-blur-sm">
-          <form onSubmit={onPoliticianEnter} className="w-full max-w-lg rounded-3xl border border-white/10 bg-ink p-6 text-white shadow-panel">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-maize">Acceso de candidatura</p>
-                <h2 className="mt-2 text-2xl font-black">Ingresa con tu ID oficial</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCandidateLoginOpen(false)}
-                className="grid h-9 w-9 place-items-center rounded-md border border-white/15 text-lg font-black text-white/75 transition hover:bg-white/10 hover:text-white"
-                aria-label="Cerrar acceso de candidato"
-              >
-                x
-              </button>
-            </div>
-            <p className="mt-4 text-sm leading-6 text-white/70">
-              Usa el codigo oficial para reclamar tu perfil, editar informacion y publicar propuestas verificadas.
-            </p>
-            <label className="mt-6 block text-sm font-black uppercase tracking-[0.12em] text-white/60">
-              ID oficial
-              <input
-                className="mt-3 h-14 w-full rounded-2xl border border-white/15 bg-white px-4 text-sm font-black text-ink outline-none focus:border-maize"
-                value={politicianCode}
-                onChange={(event) => setPoliticianCode(event.target.value)}
-                placeholder="MX-CHIH-CHIHUAHUA-EST-0054"
-              />
-            </label>
-            {loginError && (
-              <p className="mt-4 rounded-2xl bg-signal/20 p-4 text-sm font-bold text-white">
-                {loginError}
-              </p>
-            )}
-            <button className="mt-6 h-14 w-full rounded-full bg-maize text-base font-black text-ink transition hover:bg-maize/90">
-              Validar codigo
-            </button>
-            <p className="mt-4 text-xs font-bold leading-5 text-white/55">
-              En produccion este acceso debe continuar con registro seguro, email/magic link o autenticacion de dos factores.
-            </p>
-          </form>
-        </div>
+        <CandidatePortalModal
+          politicianCode={politicianCode}
+          setPoliticianCode={setPoliticianCode}
+          loginError={loginError}
+          onPoliticianEnter={onPoliticianEnter}
+          onClose={() => setIsCandidateLoginOpen(false)}
+        />
       )}
     </main>
+  );
+}
+
+function CandidatePortalModal({ politicianCode, setPoliticianCode, loginError, onPoliticianEnter, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/60 px-4 py-6 backdrop-blur-sm">
+      <form onSubmit={onPoliticianEnter} className="w-full max-w-lg rounded-3xl border border-white/10 bg-ink p-6 text-white shadow-panel">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-maize">Acceso de candidatura</p>
+            <h2 className="mt-2 text-2xl font-black">Ingresa con tu ID oficial</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-md border border-white/15 text-lg font-black text-white/75 transition hover:bg-white/10 hover:text-white"
+            aria-label="Cerrar acceso de candidato"
+          >
+            x
+          </button>
+        </div>
+        <p className="mt-4 text-sm leading-6 text-white/70">
+          Usa el codigo oficial para reclamar tu perfil, editar informacion y publicar propuestas verificadas.
+        </p>
+        <label className="mt-6 block text-sm font-black uppercase tracking-[0.12em] text-white/60">
+          ID oficial
+          <input
+            className="mt-3 h-14 w-full rounded-2xl border border-white/15 bg-white px-4 text-sm font-black text-ink outline-none focus:border-maize"
+            value={politicianCode}
+            onChange={(event) => setPoliticianCode(event.target.value)}
+            placeholder="MX-CHIH-CHIHUAHUA-EST-0054"
+          />
+        </label>
+        {loginError && (
+          <p className="mt-4 rounded-2xl bg-signal/20 p-4 text-sm font-bold text-white">
+            {loginError}
+          </p>
+        )}
+        <button className="mt-6 h-14 w-full rounded-full bg-maize text-base font-black text-ink transition hover:bg-maize/90">
+          Validar codigo
+        </button>
+        <p className="mt-4 text-xs font-bold leading-5 text-white/55">
+          En produccion este acceso debe continuar con registro seguro, email/magic link o autenticacion de dos factores.
+        </p>
+      </form>
+    </div>
+  );
+}
+
+function PartyAdminModal({ parties, unlocked, setUnlocked, onSave, onClose }) {
+  const [password, setPassword] = useState('');
+  const [draft, setDraft] = useState({ name: '', shortName: '', color: '#6A0DAD', description: '' });
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const selectParty = (party) => {
+    setDraft({
+      id: party.id,
+      name: party.name,
+      shortName: party.shortName ?? '',
+      color: party.color ?? '#0A0A0F',
+      description: party.description ?? '',
+    });
+    setMessage('');
+  };
+
+  const save = (event) => {
+    event.preventDefault();
+    if (!unlocked) {
+      setUnlocked(true);
+      setMessageType('success');
+      setMessage('Modo de edicion abierto. Ahora puedes guardar partidos.');
+      return;
+    }
+
+    setIsSaving(true);
+    setMessageType('success');
+    setMessage('Guardando partido...');
+    Promise.resolve(onSave(draft, password))
+      .then((savedParty) => {
+        setDraft({ id: savedParty.id, name: savedParty.name, shortName: savedParty.shortName, color: savedParty.color, description: savedParty.description });
+        setMessageType('success');
+        setMessage('Partido guardado correctamente.');
+      })
+      .catch((error) => {
+        setMessageType('error');
+        setMessage(error.message);
+      })
+      .finally(() => setIsSaving(false));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/60 p-4 backdrop-blur-sm">
+      <section className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-ink/10 bg-white p-5 shadow-panel">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-civic">Administracion</p>
+            <h2 className="mt-1 text-2xl font-black">Perfiles de partidos</h2>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-md border border-ink/15 text-sm font-black hover:bg-ink/5" aria-label="Cerrar partidos">
+            x
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]">
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setDraft({ name: '', shortName: '', color: '#6A0DAD', description: '' })}
+              className="h-10 w-full rounded-md bg-ink text-sm font-black text-white hover:bg-ink/90"
+            >
+              Nuevo partido
+            </button>
+            {parties.map((party) => (
+              <button
+                key={`${party.name}-${party.color}`}
+                type="button"
+                onClick={() => selectParty(party)}
+                className="flex w-full items-center gap-3 rounded-lg border border-ink/10 p-3 text-left transition hover:border-civic/30 hover:bg-ballot"
+              >
+                <span className="h-8 w-8 shrink-0 rounded-md" style={{ backgroundColor: party.color }} />
+                <span>
+                  <span className="block text-sm font-black">{party.name}</span>
+                  <span className="block text-xs font-bold text-ink/45">{party.shortName || 'Sin siglas'}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={save} className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Contrasena de administracion</span>
+              <input
+                type="password"
+                className="mt-2 h-10 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Solo equipo administrador"
+              />
+            </label>
+            <AdminInput label="Nombre del partido" value={draft.name} onChange={(value) => setDraft((current) => ({ ...current, name: value }))} />
+            <AdminInput label="Siglas" value={draft.shortName} onChange={(value) => setDraft((current) => ({ ...current, shortName: value }))} />
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Color del banner</span>
+              <div className="mt-2 grid gap-2 sm:grid-cols-[120px_1fr]">
+                <input
+                  type="color"
+                  className="h-10 w-full rounded-md border border-ink/15 bg-ballot p-1"
+                  value={draft.color}
+                  onChange={(event) => setDraft((current) => ({ ...current, color: event.target.value.toUpperCase() }))}
+                />
+                <input
+                  className="h-10 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
+                  value={draft.color}
+                  onChange={(event) => setDraft((current) => ({ ...current, color: event.target.value }))}
+                  placeholder="#6A0DAD"
+                />
+              </div>
+            </label>
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Descripcion</span>
+              <textarea
+                className="mt-2 min-h-24 w-full resize-none rounded-md border border-ink/15 bg-ballot p-3 text-sm leading-6 outline-none focus:border-civic"
+                value={draft.description}
+                onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
+              />
+            </label>
+            {message && (
+              <p className={`rounded-md p-3 text-sm font-black ${messageType === 'error' ? 'bg-signal/10 text-signal' : 'bg-civic/10 text-civic'}`}>
+                {message}
+              </p>
+            )}
+            <button disabled={isSaving} className="h-11 w-full rounded-md bg-civic text-sm font-black text-white hover:bg-civic/90 disabled:cursor-wait disabled:opacity-60">
+              {isSaving ? 'Guardando...' : unlocked ? 'Guardar partido' : 'Desbloquear edicion'}
+            </button>
+          </form>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -930,71 +1397,80 @@ function LandingMetric({ value, label }) {
   );
 }
 
-function Header({ entryMode, onReset, activePolitician, onFeed, onProfile, onCompare }) {
+function Header({ entryMode, view, contentMode, onLogo, onPortal, activePolitician, onFeed, onChat, onProfile, onCompare, onPartyAdmin }) {
+  const isFeedActive = view === 'feed' && contentMode === 'feed';
+  const isChatActive = view === 'feed' && contentMode === 'chat';
+  const isCompareActive = view === 'compare';
+  const navButtonClass = (active) =>
+    `rounded-md px-3 py-2 transition ${active ? 'bg-ink text-white shadow-panel' : 'text-ink/62 hover:bg-ink/5 hover:text-ink'}`;
+
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-ink/10 bg-ballot/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <a href="#" className="flex min-w-0 items-center gap-3 font-black">
+          <button type="button" onClick={onLogo} className="flex min-w-0 items-center gap-3 font-black transition hover:text-civic">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-ink text-sm text-white">CD</span>
             <span className="truncate">CyberDemocracia</span>
-          </a>
-          <nav className="hidden items-center gap-5 text-sm font-bold text-ink/62 md:flex">
-            <button className="hover:text-ink" onClick={onFeed}>Feed civico</button>
-            {entryMode === 'politician' && <button className="hover:text-ink" onClick={onProfile}>Perfil</button>}
-            {entryMode !== 'politician' && <button className="hover:text-ink" onClick={onCompare}>Comparar</button>}
-          </nav>
-          <button onClick={onReset} className="rounded-md border border-civic/25 bg-white px-3 py-2 text-xs font-black text-civic hover:bg-civic/10">
-            {entryMode === 'politician' ? `Politico: ${activePolitician.name}` : 'Modo ciudadano'}
           </button>
+          <nav className="hidden items-center gap-2 text-sm font-bold md:flex">
+            <button className={navButtonClass(isFeedActive)} onClick={onFeed}>Feed</button>
+            <button className={navButtonClass(isChatActive)} onClick={onChat}>IA</button>
+            <button className={navButtonClass(isCompareActive)} onClick={onCompare}>Comparar</button>
+            {entryMode === 'politician' && <button className={navButtonClass(view === 'profile')} onClick={onProfile}>Mi perfil</button>}
+          </nav>
+          <div className="hidden items-center gap-2 md:flex">
+            <button onClick={onPartyAdmin} className="rounded-md border border-ink/15 bg-white px-3 py-2 text-xs font-black text-ink/65 hover:bg-ink/5">
+              Partidos
+            </button>
+            <button onClick={entryMode === 'politician' ? onProfile : onPortal} className="rounded-md border border-civic/25 bg-white px-3 py-2 text-xs font-black text-civic hover:bg-civic/10">
+              {entryMode === 'politician' ? activePolitician.name : 'Portal para candidatos'}
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Mobile bottom navigation */}
       <nav className="mobile-nav-safe fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-ballot/95 backdrop-blur-sm md:hidden">
-        <div className="grid grid-cols-3 divide-x divide-ink/10">
+        <div className="grid grid-cols-4 divide-x divide-ink/10">
           <button
             onClick={onFeed}
-            className="flex flex-col items-center gap-1 py-3 text-xs font-black text-ink/55 transition active:text-civic"
+            className={`flex flex-col items-center gap-1 py-3 text-xs font-black transition ${isFeedActive ? 'text-civic' : 'text-ink/55 active:text-civic'}`}
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 5h18M3 10h18M3 15h12" />
             </svg>
             Feed
           </button>
-          {entryMode === 'politician' ? (
-            <button
-              onClick={onProfile}
-              className="flex flex-col items-center gap-1 py-3 text-xs font-black text-ink/55 transition active:text-civic"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-              </svg>
-              Perfil
-            </button>
-          ) : (
-            <button
-              onClick={onCompare}
-              className="flex flex-col items-center gap-1 py-3 text-xs font-black text-ink/55 transition active:text-civic"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="4" width="8" height="16" rx="1" />
-                <rect x="14" y="4" width="8" height="16" rx="1" />
-              </svg>
-              Comparar
-            </button>
-          )}
           <button
-            onClick={onReset}
+            onClick={onChat}
+            className={`flex flex-col items-center gap-1 py-3 text-xs font-black transition ${isChatActive ? 'text-civic' : 'text-ink/55 active:text-civic'}`}
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 8V4H8" />
+              <rect x="4" y="8" width="16" height="12" rx="2" />
+              <path d="M2 14h2M20 14h2M9 13v2M15 13v2" />
+            </svg>
+            IA
+          </button>
+          <button
+            onClick={onCompare}
+            className={`flex flex-col items-center gap-1 py-3 text-xs font-black transition ${isCompareActive ? 'text-civic' : 'text-ink/55 active:text-civic'}`}
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="8" height="16" rx="1" />
+              <rect x="14" y="4" width="8" height="16" rx="1" />
+            </svg>
+            Comparar
+          </button>
+          <button
+            onClick={entryMode === 'politician' ? onProfile : onPortal}
             className="flex flex-col items-center gap-1 py-3 text-xs font-black text-ink/55 transition active:text-civic"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
             </svg>
-            Salir
+            {entryMode === 'politician' ? 'Perfil' : 'Portal'}
           </button>
         </div>
       </nav>
@@ -1068,19 +1544,48 @@ function SearchBar({ searchQuery, setSearchQuery, searchScope, setSearchScope })
   );
 }
 
-function LocationPanel({ location, onLocationChange, sectionQuery, setSectionQuery, sectionError, onSectionSearch }) {
-  const selectedPresetExists = locationPresets.some((preset) => preset.label === location.label);
+function LocationPanel({ location, onStateChange, onMunicipalityChange, onDistrictChange, sectionQuery, setSectionQuery, sectionError, onSectionSearch }) {
+  const catalog = electoralCatalog[location.state];
+  const municipalityOptions = catalog?.municipalities ?? [];
+  const selectedMunicipality = municipalityOptions.find((item) => item.name === location.municipality);
+  const localDistrictOptions = selectedMunicipality
+    ? catalog.localDistricts.filter((district) => selectedMunicipality.localDistricts.includes(district.number))
+    : catalog?.localDistricts ?? [];
+  const federalDistrictOptions = selectedMunicipality
+    ? catalog.federalDistricts.filter((district) => selectedMunicipality.federalDistricts.includes(district.number))
+    : catalog?.federalDistricts ?? [];
+  const hasCatalog = Boolean(catalog);
 
   return (
     <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-panel">
       <p className="text-xs font-black uppercase tracking-[0.14em] text-civic">Ubicacion electoral</p>
       <h1 className="mt-2 text-2xl font-black leading-tight">Encuentra a quienes aparecen en tu boleta.</h1>
       <p className="mt-3 text-sm leading-6 text-ink/68">
-        En Chihuahua, la forma mas precisa es capturar la seccion electoral de tu credencial para encontrar tu distrito local.
+        La seccion electoral es la ruta mas precisa: cruza municipio, distrito local y distrito federal. Si no la tienes a la mano, puedes empezar por estado y municipio.
       </p>
+
+      <label className="mt-4 block text-xs font-black uppercase tracking-[0.12em] text-ink/45" htmlFor="state-select">
+        Selecciona tu estado
+      </label>
+      <select
+        id="state-select"
+        className="mt-2 h-11 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-black outline-none focus:border-civic"
+        value={location.state}
+        onChange={(event) => onStateChange(event.target.value)}
+      >
+        {mexicoStates.map((state) => (
+          <option key={state}>{state}</option>
+        ))}
+      </select>
+      {!hasCatalog && (
+        <p className="mt-2 rounded-md bg-maize/20 p-3 text-xs font-bold leading-5 text-ink/65">
+          Por ahora el MVP tiene cartografia seccional cargada para Chihuahua. Este flujo ya queda listo para conectar mas estados despues.
+        </p>
+      )}
+
       <form onSubmit={onSectionSearch} className="mt-4 rounded-lg border border-civic/20 bg-civic/5 p-3">
         <label className="block text-xs font-black uppercase tracking-[0.12em] text-civic" htmlFor="electoral-section">
-          Seccion electoral
+          Agrega tu seccion
         </label>
         <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
           <input
@@ -1091,8 +1596,9 @@ function LocationPanel({ location, onLocationChange, sectionQuery, setSectionQue
             value={sectionQuery}
             onChange={(event) => setSectionQuery(event.target.value)}
             placeholder="Ej. 0747"
+            disabled={!hasCatalog}
           />
-          <button className="h-11 rounded-md bg-civic px-4 text-sm font-black text-white transition hover:bg-civic/90">Buscar</button>
+          <button disabled={!hasCatalog} className="h-11 rounded-md bg-civic px-4 text-sm font-black text-white transition hover:bg-civic/90 disabled:cursor-not-allowed disabled:opacity-50">Buscar</button>
         </div>
         {sectionError ? (
           <p className="mt-2 text-xs font-bold leading-5 text-signal">{sectionError}</p>
@@ -1100,20 +1606,57 @@ function LocationPanel({ location, onLocationChange, sectionQuery, setSectionQue
           <p className="mt-2 text-xs font-bold leading-5 text-ink/55">La seccion aparece en tu credencial para votar. No guardamos este dato.</p>
         )}
       </form>
-      <label className="mt-4 block text-xs font-black uppercase tracking-[0.12em] text-ink/45" htmlFor="location">
-        O usa una ubicacion de prueba
+
+      <label className="mt-4 block text-xs font-black uppercase tracking-[0.12em] text-ink/45" htmlFor="municipality-select">
+        O selecciona tu municipio
       </label>
       <select
-        id="location"
+        id="municipality-select"
         className="mt-2 h-11 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
-        value={location.label}
-        onChange={(event) => onLocationChange(event.target.value)}
+        value={location.municipality}
+        onChange={(event) => onMunicipalityChange(event.target.value)}
+        disabled={!hasCatalog}
       >
-        {!selectedPresetExists && <option>{location.label}</option>}
-        {locationPresets.map((preset) => (
-          <option key={preset.label}>{preset.label}</option>
+        <option>Todo el estado</option>
+        {municipalityOptions.map((municipality) => (
+          <option key={municipality.name}>{municipality.name}</option>
         ))}
       </select>
+
+      {hasCatalog && (
+        <div className="mt-4 grid gap-3">
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Distrito local</span>
+            <select
+              className="mt-2 h-11 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
+              value={location.localDistrictNumber ?? ''}
+              onChange={(event) => onDistrictChange('local', event.target.value)}
+            >
+              <option value="">Todos los distritos locales</option>
+              {localDistrictOptions.map((district) => (
+                <option key={district.number} value={district.number}>
+                  {district.label} - Cabecera: {district.head}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Distrito federal</span>
+            <select
+              className="mt-2 h-11 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
+              value={location.federalDistrictNumber ?? ''}
+              onChange={(event) => onDistrictChange('federal', event.target.value)}
+            >
+              <option value="">Todos los distritos federales</option>
+              {federalDistrictOptions.map((district) => (
+                <option key={district.number} value={district.number}>
+                  {district.label} - Cabecera: {district.head}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       <DistrictMap location={location} />
       <div className="mt-4 rounded-lg bg-ink p-4 text-white">
         {location.electoralSection && <InfoRow light label="Seccion" value={`${location.electoralSection} (${location.sectionType})`} />}
@@ -1123,9 +1666,6 @@ function LocationPanel({ location, onLocationChange, sectionQuery, setSectionQue
         <InfoRow light label="Distrito local" value={location.localDistrict} />
         {location.localDistrictHead && <InfoRow light label="Cabecera local" value={location.localDistrictHead} />}
       </div>
-      <button className="mt-4 h-11 w-full rounded-md border border-ink/15 text-sm font-black hover:bg-ink/5">
-        Usar mi ubicacion
-      </button>
     </section>
   );
 }
@@ -1217,13 +1757,12 @@ function DistrictMap({ location }) {
   );
 }
 
-function Filters({ level, setLevel, office, setOffice, topic, setTopic }) {
+function Filters({ level, setLevel, office, setOffice, topic, setTopic, availableOffices }) {
   return (
     <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-panel">
       <p className="text-xs font-black uppercase tracking-[0.14em] text-civic">Filtros</p>
       <div className="mt-4 space-y-4">
-        <FilterGroup label="Nivel" options={levels} value={level} onChange={setLevel} />
-        <FilterGroup label="Tema" options={topics} value={topic} onChange={setTopic} />
+        <FilterGroup label="Nivel" options={levels} value={level} onChange={setLevel} singleColumn />
         <label className="block">
           <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Cargo</span>
           <select
@@ -1231,26 +1770,27 @@ function Filters({ level, setLevel, office, setOffice, topic, setTopic }) {
             value={office}
             onChange={(event) => setOffice(event.target.value)}
           >
-            {offices.map((item) => (
+            {availableOffices.map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
         </label>
+        <FilterGroup label="Tema" options={topics} value={topic} onChange={setTopic} />
       </div>
     </section>
   );
 }
 
-function FilterGroup({ label, options, value, onChange }) {
+function FilterGroup({ label, options, value, onChange, singleColumn = false }) {
   return (
     <div>
       <p className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">{label}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className={`mt-2 gap-2 ${singleColumn ? 'grid grid-cols-1' : 'flex flex-wrap'}`}>
         {options.map((option) => (
           <button
             key={option}
             onClick={() => onChange(option)}
-            className={`rounded-md px-3 py-2 text-xs font-black transition ${value === option ? 'bg-ink text-white' : 'bg-ink/5 text-ink/68 hover:bg-ink/10'}`}
+            className={`rounded-md px-3 py-2 text-xs font-black transition ${singleColumn ? 'w-full text-left' : ''} ${value === option ? 'bg-ink text-white' : 'bg-ink/5 text-ink/68 hover:bg-ink/10'}`}
           >
             {option}
           </button>
@@ -1318,7 +1858,8 @@ function PoliticianPost({ politician, post, active, onOpen, onOpenImage }) {
   const postDate = latestPost?.createdAt || politician.updatedAt;
 
   return (
-    <article className={`rounded-lg border bg-white p-4 shadow-panel transition hover:-translate-y-0.5 ${active ? 'border-civic/40' : 'border-ink/10'}`}>
+    <article className={`relative rounded-lg border bg-white p-4 pt-12 shadow-panel transition hover:-translate-y-0.5 ${active ? 'border-civic/40' : 'border-ink/10'}`}>
+      <ReportButton politicianId={politician.id} contentId={latestPost?.id || 'perfil'} title={postTitle} />
       <div className="flex flex-wrap gap-2">
         {visibleTags.slice(0, 5).map((tag) => (
           <Tag key={`${politician.id}-${tag}`}>{tag}</Tag>
@@ -1382,7 +1923,7 @@ function PoliticianPost({ politician, post, active, onOpen, onOpenImage }) {
       <footer className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-ink/10 pt-3 text-xs font-bold text-ink/52">
         <span>Publicado: {postDate}</span>
       </footer>
-      <ShareActions
+      <ShareButton
         className="mt-3"
         politicianId={politician.id}
         contentId={latestPost?.id || (latestPost ? 'publicacion' : 'perfil')}
@@ -1406,6 +1947,7 @@ function CandidateProfilePage({
   onUpdatePost,
   onDeletePost,
   onOpenImage,
+  parties,
 }) {
   const [summaryStatus, setSummaryStatus] = useState('idle');
   const [aiSummary, setAiSummary] = useState('');
@@ -1534,6 +2076,7 @@ function CandidateProfilePage({
           onAddPost={onAddPost}
           onUpdatePost={onUpdatePost}
           onDeletePost={onDeletePost}
+          parties={parties}
         />
       )}
 
@@ -1542,7 +2085,8 @@ function CandidateProfilePage({
         <div className="mt-4 space-y-3">
           {(politician.posts ?? []).length === 0 && <p className="rounded-lg bg-ballot p-4 text-sm font-bold text-ink/58">Aun no hay publicaciones.</p>}
           {(politician.posts ?? []).map((post, index) => (
-            <article key={`${politician.id}-post-page-${index}`} className="rounded-lg border border-ink/10 p-4">
+            <article key={`${politician.id}-post-page-${index}`} className="relative rounded-lg border border-ink/10 p-4 pt-12">
+              <ReportButton politicianId={politician.id} contentId={post.id || `publicacion-${index + 1}`} title={post.title || 'Publicacion'} />
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-md bg-civic/10 px-2 py-1 text-xs font-black text-civic">{post.type ?? 'Publicacion'}</span>
                 {(post.tags ?? []).map((tag) => <Tag key={`${post.title}-${tag}`}>{tag}</Tag>)}
@@ -1560,10 +2104,10 @@ function CandidateProfilePage({
                 </button>
               )}
               <p className="mt-3 text-sm leading-6 text-ink/72">{post.body}</p>
-              <ShareActions
+              <ShareButton
                 className="mt-3"
                 politicianId={politician.id}
-                contentId={`publicacion-${index + 1}`}
+                contentId={post.id || `publicacion-${index + 1}`}
                 title={`${post.title || 'Publicacion'} - ${politician.name}`}
                 text={`${post.body}\n\n${politician.name} | ${politician.office} | ${politician.party}`}
               />
@@ -1807,7 +2351,7 @@ function CompareCandidateCard({ politician, selected, disabled, onSelect, onOpen
 function AnalysisModal({ selectedPoliticians, question, setQuestion, analysis, status, onRun, onClose }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/60 p-4">
-      <section className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white p-4 shadow-panel">
+      <section className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white p-5 shadow-panel">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-signal">Analisis neutral IA</p>
@@ -1835,15 +2379,97 @@ function AnalysisModal({ selectedPoliticians, question, setQuestion, analysis, s
         >
           {status === 'loading' ? 'Generando analisis...' : 'Generar analisis neutral'}
         </button>
-        <div className={`mt-4 rounded-lg p-4 ${status === 'error' ? 'bg-signal/10 text-signal' : 'bg-ink text-white'}`}>
+        <div className={`mt-4 rounded-lg border p-5 ${status === 'error' ? 'border-signal/25 bg-signal/10 text-signal' : 'border-ink/10 bg-white text-ink'}`}>
           <p className="text-sm font-black">{status === 'ready' ? 'Resultado' : 'Reglas'}</p>
-          <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${status === 'error' ? 'text-signal' : 'text-white/72'}`}>
-            {analysis || 'La IA no recomienda candidatos ni declara ganadores. Solo compara coincidencias, diferencias e informacion faltante.'}
-          </p>
+          {analysis ? (
+            <FormattedAiText text={analysis} isError={status === 'error'} />
+          ) : (
+            <p className="mt-2 text-sm leading-6 text-ink/60">
+              La IA no recomienda candidatos ni declara ganadores. Solo compara coincidencias, diferencias e informacion faltante.
+            </p>
+          )}
         </div>
       </section>
     </div>
   );
+}
+
+function FormattedAiText({ text, isError = false }) {
+  const lines = String(text)
+    .split('\n')
+    .map((line) => line.trimEnd());
+
+  return (
+    <div className={`mt-3 space-y-3 text-sm leading-7 ${isError ? 'text-signal' : 'text-ink/78'}`}>
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          return <div key={`space-${index}`} className="h-1" />;
+        }
+
+        const headingMatch = trimmed.match(/^#{1,4}\s+(.*)$/);
+        if (headingMatch) {
+          return (
+            <h3 key={`heading-${index}`} className="pt-2 text-base font-black text-ink">
+              <FormattedInline text={headingMatch[1]} />
+            </h3>
+          );
+        }
+
+        const numberedMatch = trimmed.match(/^(\d+\.)\s+(.*)$/);
+        if (numberedMatch) {
+          return (
+            <h3 key={`numbered-${index}`} className="pt-2 text-base font-black text-ink">
+              <span className="text-[#6A0DAD]">{numberedMatch[1]}</span> <FormattedInline text={numberedMatch[2]} />
+            </h3>
+          );
+        }
+
+        const bulletMatch = trimmed.match(/^[-*]\s+(.*)$/);
+        if (bulletMatch) {
+          return (
+            <div key={`bullet-${index}`} className="flex gap-3">
+              <span className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-[#6A0DAD]" />
+              <p>
+                <FormattedInline text={bulletMatch[1]} />
+              </p>
+            </div>
+          );
+        }
+
+        if (trimmed.startsWith('|')) {
+          return (
+            <pre key={`table-${index}`} className="overflow-x-auto rounded-md bg-ballot px-3 py-2 text-xs text-ink/70">
+              {trimmed}
+            </pre>
+          );
+        }
+
+        return (
+          <p key={`paragraph-${index}`}>
+            <FormattedInline text={trimmed} />
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function FormattedInline({ text }) {
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={`bold-${index}`} className="font-black text-[#6A0DAD]">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <span key={`text-${index}`}>{part}</span>;
+  });
 }
 
 function PoliticianAdminPanel({
@@ -1856,6 +2482,7 @@ function PoliticianAdminPanel({
   onAddPost,
   onUpdatePost,
   onDeletePost,
+  parties = partyCatalog,
 }) {
   const [profileDraft, setProfileDraft] = useState({
     name: politician.name,
@@ -1875,6 +2502,8 @@ function PoliticianAdminPanel({
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPhoto, setIsSavingPhoto] = useState(false);
   const [isSavingPost, setIsSavingPost] = useState(false);
+  const [photoCameraOpen, setPhotoCameraOpen] = useState(false);
+  const [postCameraOpen, setPostCameraOpen] = useState(false);
 
   const showSuccess = (message) => {
     setMessageType('success');
@@ -2036,7 +2665,7 @@ function PoliticianAdminPanel({
 
       <form onSubmit={saveProfile} className="mt-4 space-y-3">
         <AdminInput label="Nombre publico" value={profileDraft.name} onChange={(value) => setProfileDraft((draft) => ({ ...draft, name: value }))} />
-        <AdminInput label="Partido o coalicion" value={profileDraft.party} onChange={(value) => setProfileDraft((draft) => ({ ...draft, party: value }))} />
+        <PartyDropdown value={profileDraft.party} parties={parties} onChange={(value) => setProfileDraft((draft) => ({ ...draft, party: value }))} />
         <div className="rounded-lg border border-ink/10 p-3 transition hover:border-civic/35 hover:shadow-panel">
           <p className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Foto de perfil</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-[96px_1fr]">
@@ -2053,11 +2682,10 @@ function PoliticianAdminPanel({
                 <span className="block text-sm font-black text-civic">Subir foto desde mi dispositivo</span>
                 <span className="mt-1 block text-xs font-bold leading-5 text-ink/55">JPG, PNG o WebP. Haz clic aqui para seleccionar un archivo.</span>
               </label>
-              <label className="group cursor-pointer rounded-lg border border-ink/15 bg-ink p-4 text-white transition hover:-translate-y-0.5 hover:bg-ink/90 hover:shadow-panel focus-within:ring-2 focus-within:ring-ink/20">
-                <input className="sr-only" type="file" accept="image/*" capture="user" onChange={handlePhotoFile} />
+              <button type="button" onClick={() => setPhotoCameraOpen(true)} className="group cursor-pointer rounded-lg border border-ink/15 bg-ink p-4 text-left text-white transition hover:-translate-y-0.5 hover:bg-ink/90 hover:shadow-panel focus:outline-none focus:ring-2 focus:ring-ink/20">
                 <span className="block text-sm font-black">Tomar foto ahora</span>
-                <span className="mt-1 block text-xs font-bold leading-5 text-white/60">En celular o navegador compatible abre la camara frontal.</span>
-              </label>
+                <span className="mt-1 block text-xs font-bold leading-5 text-white/60">Abre la camara frontal del dispositivo.</span>
+              </button>
             </div>
           </div>
           <div className="mt-3">
@@ -2144,11 +2772,10 @@ function PoliticianAdminPanel({
                 <span className="block text-sm font-black text-civic">Subir imagen</span>
                 <span className="mt-1 block text-xs font-bold text-ink/50">Desde tu dispositivo</span>
               </label>
-              <label className="cursor-pointer rounded-lg border border-ink/15 bg-ink p-3 text-white transition hover:-translate-y-0.5 hover:bg-ink/90 hover:shadow-panel">
-                <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={handlePostImageFile} />
+              <button type="button" onClick={() => setPostCameraOpen(true)} className="cursor-pointer rounded-lg border border-ink/15 bg-ink p-3 text-left text-white transition hover:-translate-y-0.5 hover:bg-ink/90 hover:shadow-panel">
                 <span className="block text-sm font-black">Tomar foto</span>
                 <span className="mt-1 block text-xs font-bold text-white/60">Camara del dispositivo</span>
-              </label>
+              </button>
             </div>
             <input
               className="mt-3 h-10 w-full rounded-md border border-ink/15 bg-ballot px-3 text-sm font-bold outline-none focus:border-civic"
@@ -2217,6 +2844,32 @@ function PoliticianAdminPanel({
           {savedMessage}
         </p>
       )}
+      {photoCameraOpen && (
+        <CameraCaptureModal
+          title="Tomar foto de perfil"
+          facingMode="user"
+          onClose={() => setPhotoCameraOpen(false)}
+          onCapture={(dataUrl) => {
+            setProfileDraft((draft) => ({ ...draft, photoUrl: dataUrl }));
+            setPhotoMessageType('success');
+            setPhotoMessage('Foto tomada. Presiona "Guardar foto" para actualizarla en la base de datos.');
+            setPhotoCameraOpen(false);
+          }}
+        />
+      )}
+      {postCameraOpen && (
+        <CameraCaptureModal
+          title="Tomar foto para publicacion"
+          facingMode="environment"
+          onClose={() => setPostCameraOpen(false)}
+          onCapture={(dataUrl) => {
+            setPostDraft((draft) => ({ ...draft, imageUrl: dataUrl }));
+            setPostMessageType('success');
+            setPostMessage('Foto tomada. Publica o guarda la publicacion para subirla a la base de datos.');
+            setPostCameraOpen(false);
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -2247,6 +2900,34 @@ function TopicDropdown({ value, onChange }) {
           <option key={topic}>{topic}</option>
         ))}
       </select>
+    </label>
+  );
+}
+
+function PartyDropdown({ value, parties, onChange }) {
+  const selectedParty = parties.find((party) => normalizeText(party.name) === normalizeText(value));
+
+  return (
+    <label className="block">
+      <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Partido</span>
+      <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_120px]">
+        <select
+          className="h-10 rounded-md border border-ink/15 bg-ballot px-3 text-sm font-black outline-none focus:border-civic"
+          value={selectedParty?.name ?? value ?? ''}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          <option value="">Selecciona un partido</option>
+          {parties.map((party) => (
+            <option key={`${party.name}-${party.color}`} value={party.name}>
+              {party.name}{party.shortName ? ` (${party.shortName})` : ''}
+            </option>
+          ))}
+        </select>
+        <div className="flex h-10 items-center gap-2 rounded-md border border-ink/10 bg-ballot px-3">
+          <span className="h-5 w-5 rounded-full border border-ink/10" style={{ backgroundColor: selectedParty?.color ?? getPartyColor({ party: value }) }} />
+          <span className="text-xs font-black text-ink/55">Banner</span>
+        </div>
+      </div>
     </label>
   );
 }
@@ -2288,6 +2969,7 @@ function EditableProposal({ proposal, onSave, onDelete }) {
 
 function EditablePost({ post, onSave, onDelete }) {
   const [draft, setDraft] = useState({ ...post, topic: post.tags?.[0] ?? 'Sin tema' });
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   useEffect(() => {
     setDraft({ ...post, topic: post.tags?.[0] ?? 'Sin tema' });
@@ -2344,7 +3026,10 @@ function EditablePost({ post, onSave, onDelete }) {
             <input className="sr-only" type="file" accept="image/*" onChange={handleImageFile} />
             Cambiar imagen
           </label>
-          <button type="button" onClick={() => setDraft((current) => ({ ...current, imageUrl: '' }))} className="rounded-md border border-ink/15 px-3 py-2 text-xs font-black hover:bg-ink/5">
+          <button type="button" onClick={() => setCameraOpen(true)} className="rounded-md border border-ink/15 px-3 py-2 text-xs font-black hover:bg-ink/5">
+            Tomar foto
+          </button>
+          <button type="button" onClick={() => setDraft((current) => ({ ...current, imageUrl: '' }))} className="rounded-md border border-ink/15 px-3 py-2 text-xs font-black hover:bg-ink/5 sm:col-span-2">
             Quitar imagen
           </button>
         </div>
@@ -2363,6 +3048,104 @@ function EditablePost({ post, onSave, onDelete }) {
           Eliminar
         </button>
       </div>
+      {cameraOpen && (
+        <CameraCaptureModal
+          title="Tomar foto para publicacion"
+          facingMode="environment"
+          onClose={() => setCameraOpen(false)}
+          onCapture={(dataUrl) => {
+            setDraft((current) => ({ ...current, imageUrl: dataUrl }));
+            setCameraOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function CameraCaptureModal({ title, facingMode = 'environment', onCapture, onClose }) {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError('Este navegador no permite abrir la camara desde la app.');
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch {
+        setError('No se pudo abrir la camara. Revisa permisos del navegador o usa subir imagen.');
+      }
+    }
+
+    startCamera();
+
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, [facingMode]);
+
+  const capture = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    onCapture(canvas.toDataURL('image/jpeg', 0.88));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/70 p-4 backdrop-blur-sm">
+      <section className="w-full max-w-xl rounded-2xl border border-white/10 bg-white p-4 shadow-panel">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-civic">Camara</p>
+            <h2 className="mt-1 text-xl font-black">{title}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-md border border-ink/15 text-sm font-black hover:bg-ink/5" aria-label="Cerrar camara">
+            x
+          </button>
+        </div>
+        <div className="mt-4 overflow-hidden rounded-xl bg-ink">
+          {error ? (
+            <p className="p-5 text-sm font-bold leading-6 text-white">{error}</p>
+          ) : (
+            <video ref={videoRef} className="max-h-[60vh] w-full object-cover" playsInline muted />
+          )}
+        </div>
+        <canvas ref={canvasRef} className="hidden" />
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button type="button" onClick={capture} disabled={Boolean(error)} className="h-11 rounded-md bg-civic text-sm font-black text-white hover:bg-civic/90 disabled:cursor-not-allowed disabled:opacity-50">
+            Usar esta foto
+          </button>
+          <button type="button" onClick={onClose} className="h-11 rounded-md border border-ink/15 text-sm font-black hover:bg-ink/5">
+            Cancelar
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -2548,7 +3331,34 @@ function Tag({ children }) {
   return <span className="rounded-md bg-ink/5 px-2 py-1 text-xs font-black text-ink/65">{children}</span>;
 }
 
-function ShareActions({ politicianId, contentId, title, text, className = '' }) {
+function ShareButton({ politicianId, contentId, title, text, className = '' }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-3 py-2 text-xs font-black text-ink/70 transition hover:-translate-y-0.5 hover:border-civic/30 hover:text-civic hover:shadow-panel"
+        aria-label="Compartir publicacion"
+      >
+        <ShareIcon />
+        Compartir
+      </button>
+      {isOpen && (
+        <ShareModal
+          politicianId={politicianId}
+          contentId={contentId}
+          title={title}
+          text={text}
+          onClose={() => setIsOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ShareModal({ politicianId, contentId, title, text, onClose }) {
   const [copied, setCopied] = useState('');
   const shareUrl = buildShareUrl(politicianId, contentId);
   const shareText = `${title}\n\n${text}`;
@@ -2581,51 +3391,128 @@ function ShareActions({ politicianId, contentId, title, text, className = '' }) 
   };
 
   return (
-    <div className={`border-t border-ink/10 pt-3 ${className}`}>
-      <span className="text-xs font-black uppercase tracking-[0.12em] text-ink/45">Compartir</span>
-      <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-        <button onClick={nativeShare} className="shrink-0 rounded-md bg-ink px-3 py-2 text-xs font-black text-white transition hover:bg-ink/90 active:scale-95">
-          Sistema
-        </button>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/60 p-3 backdrop-blur-sm sm:p-4">
+      <section className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-ink/10 bg-white p-4 shadow-panel sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-civic">Compartir</p>
+            <h2 className="mt-1 text-2xl font-black">Vista previa</h2>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-md border border-ink/15 text-sm font-black hover:bg-ink/5" aria-label="Cerrar compartir">
+            x
+          </button>
+        </div>
+        <div className="mt-4 rounded-lg border border-ink/10 bg-ballot p-4">
+          <p className="text-sm font-black">{title}</p>
+          <p className="mt-2 line-clamp-4 text-sm leading-6 text-ink/65">{text}</p>
+          <p className="mt-3 truncate text-xs font-bold text-civic">{shareUrl}</p>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <button onClick={nativeShare} className="flex h-16 flex-col items-center justify-center gap-1.5 rounded-lg bg-ink text-xs font-black text-white transition hover:-translate-y-0.5 hover:shadow-panel active:scale-95 sm:h-20">
+            <ShareIcon />
+            Sistema
+          </button>
         <a
-          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+          className="flex h-16 flex-col items-center justify-center gap-1.5 rounded-lg border border-ink/15 text-xs font-black transition hover:-translate-y-0.5 hover:bg-ink/5 hover:shadow-panel sm:h-20"
           href={`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`}
           target="_blank"
           rel="noreferrer"
         >
+          <span className="text-lg">X</span>
           X
         </a>
         <a
-          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+          className="flex h-16 flex-col items-center justify-center gap-1.5 rounded-lg border border-ink/15 text-xs font-black transition hover:-translate-y-0.5 hover:bg-ink/5 hover:shadow-panel sm:h-20"
           href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
           target="_blank"
           rel="noreferrer"
         >
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-[#1877F2] text-white">f</span>
           Facebook
         </a>
         <a
-          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+          className="flex h-16 flex-col items-center justify-center gap-1.5 rounded-lg border border-ink/15 text-xs font-black transition hover:-translate-y-0.5 hover:bg-ink/5 hover:shadow-panel sm:h-20"
           href={`https://wa.me/?text=${encodedTextWithUrl}`}
           target="_blank"
           rel="noreferrer"
         >
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-[#25D366] text-white">W</span>
           WhatsApp
         </a>
         <button
           onClick={() => copyValue(`${shareText}\n\n${shareUrl}`, 'Texto copiado para Instagram')}
-          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+          className="flex h-16 flex-col items-center justify-center gap-1.5 rounded-lg border border-ink/15 text-xs font-black transition hover:-translate-y-0.5 hover:bg-ink/5 hover:shadow-panel sm:h-20"
         >
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white">◎</span>
           Instagram
         </button>
         <button
           onClick={() => copyValue(shareUrl, 'URL copiada')}
-          className="shrink-0 rounded-md border border-ink/15 px-3 py-2 text-xs font-black transition hover:bg-ink/5"
+          className="flex h-16 flex-col items-center justify-center gap-1.5 rounded-lg border border-ink/15 text-xs font-black transition hover:-translate-y-0.5 hover:bg-ink/5 hover:shadow-panel sm:h-20"
         >
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-civic text-white">↗</span>
           Copiar URL
         </button>
-        {copied && <span className="shrink-0 text-xs font-black text-civic">{copied}</span>}
-      </div>
+        </div>
+        {copied && <p className="mt-3 rounded-md bg-civic/10 p-3 text-sm font-black text-civic">{copied}</p>}
+      </section>
     </div>
+  );
+}
+
+function ReportButton({ politicianId, contentId, title }) {
+  const [status, setStatus] = useState('idle');
+
+  const reportContent = async () => {
+    if (status === 'sent') return;
+    setStatus('loading');
+    try {
+      const response = await fetchWithTimeout(getApiUrl('/api/reports'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ politicianId, contentId, title, reason: 'Reporte ciudadano desde la publicacion' }),
+      }, 6000);
+      await parseApiPayload(response);
+      setStatus('sent');
+    } catch {
+      setStatus('sent');
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={reportContent}
+      className={`absolute right-4 top-4 inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-black transition ${
+        status === 'sent'
+          ? 'border-civic/20 bg-civic/10 text-civic'
+          : 'border-ink/10 bg-ballot text-ink/55 hover:border-signal/30 hover:text-signal'
+      }`}
+      title="Reportar publicacion"
+      aria-label="Reportar publicacion"
+    >
+      <FlagIcon />
+      {status === 'loading' ? 'Enviando' : status === 'sent' ? 'Reportado' : 'Reportar'}
+    </button>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7" />
+      <path d="M16 6l-4-4-4 4" />
+      <path d="M12 2v14" />
+    </svg>
+  );
+}
+
+function FlagIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 21V4" />
+      <path d="M5 4h12l-2 5 2 5H5" />
+    </svg>
   );
 }
 
@@ -2700,14 +3587,32 @@ function getPartyColor(politician) {
   if (isHexColor(politician?.partyColor)) return politician.partyColor;
 
   const normalizedParty = normalizeText(politician?.party);
-  if (normalizedParty.includes('morado')) return '#8B5CF6';
-  if (normalizedParty.includes('azul')) return '#1E90FF';
-  if (normalizedParty.includes('verde')) return '#89CC04';
-  if (normalizedParty.includes('rosa')) return '#FFB7C5';
-  if (normalizedParty.includes('rojo')) return '#DC143C';
-  if (normalizedParty.includes('negro')) return '#0A0A0F';
+  const catalogMatch = partyCatalog.find((party) => normalizeText(party.name) === normalizedParty || normalizeText(party.shortName) === normalizedParty);
+  if (catalogMatch) return catalogMatch.color;
+  if (normalizedParty.includes('intuicion') || normalizedParty.includes('morado')) return '#6A0DAD';
+  if (normalizedParty.includes('amor eterno') || normalizedParty.includes('azul')) return '#1E90FF';
+  if (normalizedParty.includes("partidon't") || normalizedParty.includes('verde')) return '#89CC04';
+  if (normalizedParty.includes('coquette') || normalizedParty.includes('rosa')) return '#FFB7C5';
+  if (normalizedParty.includes('salvando') || normalizedParty.includes('rojo')) return '#DC143C';
+  if (normalizedParty.includes('malaventurada') || normalizedParty.includes('negro')) return '#0A0A0F';
 
   return '#0A0A0F';
+}
+
+function mergeParties(parties) {
+  const merged = new Map();
+  [...partyCatalog, ...(parties ?? [])].forEach((party) => {
+    if (!party?.name) return;
+    const key = normalizeText(party.name);
+    merged.set(key, {
+      id: party.id ?? merged.get(key)?.id,
+      name: party.name,
+      shortName: party.shortName ?? party.short_name ?? '',
+      color: party.color ?? party.color_hex ?? getPartyColor({ party: party.name }),
+      description: party.description ?? '',
+    });
+  });
+  return Array.from(merged.values());
 }
 
 function isHexColor(value) {

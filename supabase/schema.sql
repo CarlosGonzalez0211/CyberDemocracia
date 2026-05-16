@@ -145,7 +145,21 @@ select
   coalesce(pa.official_source_url, '') as source,
   to_char(pa.updated_at, 'DD Mon YYYY') as updated_at,
   coalesce(
-    array_remove(array_agg(distinct t.name), null),
+    (
+      select array_agg(distinct topic_name order by topic_name)
+      from (
+        select t2.name as topic_name
+        from public.proposals pr2
+        join public.topics t2 on t2.id = pr2.topic_id
+        where pr2.politician_id = pa.id and pr2.status = 'published'
+        union
+        select t2.name as topic_name
+        from public.posts po
+        join public.post_topics pt2 on pt2.post_id = po.id
+        join public.topics t2 on t2.id = pt2.topic_id
+        where po.politician_id = pa.id and po.status = 'published'
+      ) all_topics
+    ),
     array[]::text[]
   ) as topics,
   coalesce(

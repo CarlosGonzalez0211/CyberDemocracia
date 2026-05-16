@@ -15,6 +15,14 @@ const supabaseAdmin =
   process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     ? createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
     : null;
+const partyCatalog = [
+  { name: 'Intuicion Mistica', shortName: 'IM', color: '#6A0DAD', description: 'Partido de identidad mistica, espiritual y profunda.' },
+  { name: 'Alianza Coquette', shortName: 'AC', color: '#FFB7C5', description: 'Partido de identidad estetica, ordenada y comunitaria.' },
+  { name: 'Partido Salvando Mexico', shortName: 'PSM', color: '#DC143C', description: 'Partido de identidad intensa, pasional y rebelde.' },
+  { name: "Partidon't Care", shortName: 'PDC', color: '#89CC04', description: 'Partido de identidad disruptiva, electrica y juvenil.' },
+  { name: 'Union Malaventurada', shortName: 'PUM', color: '#0A0A0F', description: 'Partido de identidad melancolica, sobria y profunda.' },
+  { name: 'Amor Eterno por Chihuahua', shortName: 'AEC', color: '#1E90FF', description: 'Partido de identidad alegre, brillante y chihuahuense.' },
+];
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -60,13 +68,14 @@ app.post('/api/compare', async (req, res) => {
       contents: prompt,
       config: {
         temperature: 0.2,
+        maxOutputTokens: 2200,
       },
     });
 
     res.json({ analysis: response.text });
   } catch (error) {
     console.error('Gemini compare error:', error);
-    res.status(500).json({ error: 'No se pudo generar el analisis neutral.' });
+    res.json({ analysis: buildFallbackComparison(politicians, isQuotaError(error)) });
   }
 });
 
@@ -97,10 +106,7 @@ app.post('/api/summarize-candidate', async (req, res) => {
     res.json({ summary: response.text });
   } catch (error) {
     console.error('Gemini candidate summary error:', error);
-    res.status(500).json({
-      error: 'No se pudo generar el resumen neutral.',
-      detail: process.env.NODE_ENV === 'production' ? undefined : error.message,
-    });
+    res.json({ summary: buildFallbackSummary(politician, isQuotaError(error)) });
   }
 });
 
@@ -183,6 +189,76 @@ app.delete('/api/posts/:postId', async (req, res) => {
   }
 });
 
+app.get('/api/parties', async (req, res) => {
+  const client = supabaseAdmin ?? supabase;
+  if (!client) {
+    res.status(500).json({ error: 'Supabase no esta configurado en el servidor.' });
+    return;
+  }
+
+  try {
+    res.json({ parties: await listParties(client) });
+  } catch (error) {
+    console.error('List parties error:', error);
+    res.status(500).json({ error: 'No se pudieron cargar los partidos.' });
+  }
+});
+
+app.post('/api/parties', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'La administracion de partidos no esta configurada.' });
+    return;
+  }
+
+  try {
+    verifyPartyAdmin(req.body?.password);
+    const party = await createOrUpdateParty(req.body?.party);
+    res.json({ party });
+  } catch (error) {
+    console.error('Save party error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo guardar el partido.' });
+  }
+});
+
+app.put('/api/parties/:partyId', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.status(500).json({ error: 'La administracion de partidos no esta configurada.' });
+    return;
+  }
+
+  try {
+    verifyPartyAdmin(req.body?.password);
+    const party = await createOrUpdateParty({ ...req.body?.party, id: req.params.partyId });
+    res.json({ party });
+  } catch (error) {
+    console.error('Update party error:', error);
+    res.status(error.statusCode ?? 500).json({ error: error.publicMessage ?? 'No se pudo actualizar el partido.' });
+  }
+});
+
+app.post('/api/reports', async (req, res) => {
+  if (!supabaseAdmin) {
+    res.json({ ok: true });
+    return;
+  }
+
+  const { politicianId, contentId, title, reason } = req.body ?? {};
+
+  try {
+    const { error } = await supabaseAdmin.from('content_reports').insert({
+      politician_id: politicianId || null,
+      content_id: contentId || null,
+      title: title || null,
+      reason: reason || 'Reporte ciudadano',
+    });
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Report content error:', error);
+    res.json({ ok: true });
+  }
+});
+
 app.post('/api/chat', async (req, res) => {
   if (!supabase) {
     res.status(500).json({ error: 'Supabase no esta configurado en el servidor.' });
@@ -259,7 +335,19 @@ function buildNeutralComparisonPrompt(question, politicians) {
       .map((proposal) => `- ${proposal.topic}: ${proposal.text}`)
       .join('\n');
 
+    const proposalPosts = getProposalPosts(politician)
+      .map(formatPostForPrompt)
+      .join('\n');
+
+    const posts = (politician.posts ?? [])
+      .filter((post) => !isProposalPost(post))
+      .map((post) => {
+        return formatPostForPrompt(post);
+      })
+      .join('\n');
+
     const values = (politician.values ?? []).join(', ') || 'No declarados';
+    const topics = (politician.topics ?? []).join(', ') || 'Sin temas publicados';
 
     return `
 Perfil ${index + 1}
@@ -268,10 +356,15 @@ Cargo: ${politician.office}
 Nivel: ${politician.level}
 Partido/coalicion: ${politician.party}
 Municipio: ${politician.municipality}
+Temas declarados: ${topics}
 Valores: ${values}
 Biografia: ${politician.profile}
-Propuestas:
-${proposals || '- Sin propuestas publicadas'}
+Propuestas publicadas (formato legacy):
+${proposals || '- Sin propuestas en formato legacy'}
+Propuestas publicadas (formato actual: posts con tipo "Propuesta"):
+${proposalPosts || '- Sin propuestas publicadas en posts'}
+Otras publicaciones:
+${posts || '- Sin publicaciones publicadas'}
 `;
   });
 
@@ -289,7 +382,10 @@ Reglas obligatorias:
 - No infieras informacion que no este en los datos.
 - Usa solo la informacion proporcionada.
 - Si falta informacion, dilo explicitamente.
+- Trata los posts con tipo "Propuesta" como propuestas publicadas. No digas que no hay propuestas si esa seccion contiene informacion.
+- Si las propuestas legacy estan vacias pero hay posts tipo "Propuesta", ignora el formato legacy y analiza las propuestas actuales.
 - Enfoca la comparacion en coincidencias, diferencias de enfoque, nivel de detalle, temas cubiertos e informacion faltante.
+- Mantén la respuesta completa y compacta. No incluyas una tabla Markdown larga.
 - Escribe en espanol mexicano.
 
 Pregunta del usuario:
@@ -299,11 +395,22 @@ Perfiles:
 ${profiles.join('\n---\n')}
 
 Formato de respuesta:
-1. Resumen neutral breve.
-2. Coincidencias.
-3. Diferencias de enfoque.
-4. Informacion faltante o puntos que conviene verificar.
-5. Tabla comparativa en texto con columnas: Tema | Perfil 1 | Perfil 2 | Observacion neutral.
+### 1. Resumen neutral breve
+Maximo 4 frases.
+
+### 2. Coincidencias
+Maximo 5 bullets.
+
+### 3. Diferencias de enfoque
+Maximo 6 bullets. Compara temas sustantivos, estilo, nivel de detalle y alcance.
+
+### 4. Temas principales por candidatura
+Para cada perfil, lista maximo 5 temas con una frase breve.
+
+### 5. Informacion faltante o verificable
+Maximo 5 bullets.
+
+Cierra exactamente con esta frase: Fin del analisis.
 `;
 }
 
@@ -312,11 +419,14 @@ function buildCandidateSummaryPrompt(politician) {
     .map((proposal) => `- ${proposal.topic}: ${proposal.text}`)
     .join('\n');
 
+  const proposalPosts = getProposalPosts(politician)
+    .map(formatPostForPrompt)
+    .join('\n');
+
   const posts = (politician.posts ?? [])
+    .filter((post) => !isProposalPost(post))
     .map((post) => {
-      const tags = (post.tags ?? []).join(', ') || 'Sin tags';
-      const title = post.title ? `${post.title}: ` : '';
-      return `- ${post.type ?? 'Publicacion'} | ${title}${post.body} | Tags: ${tags}`;
+      return formatPostForPrompt(post);
     })
     .join('\n');
 
@@ -349,15 +459,17 @@ Distrito local: ${politician.localDistrict}
 Temas declarados: ${topics}
 Valores declarados: ${values}
 Biografia: ${politician.profile || 'Sin biografia publicada'}
-Propuestas oficiales:
+Propuestas oficiales legacy:
 ${proposals || '- Sin propuestas publicadas'}
-Publicaciones:
+Propuestas oficiales actuales (posts con tipo "Propuesta"):
+${proposalPosts || '- Sin propuestas publicadas en posts'}
+Otras publicaciones:
 ${posts || '- Sin publicaciones publicadas'}
 
 Formato de respuesta:
 1. Resumen neutral en 3 a 5 frases.
 2. Temas principales que aborda.
-3. Propuestas o publicaciones disponibles.
+3. Propuestas disponibles, incluyendo las propuestas publicadas como posts.
 4. Informacion faltante que conviene verificar.
 `;
 }
@@ -415,6 +527,7 @@ function findRelevantProfiles(message, profiles) {
           profile.profile,
           ...(profile.topics ?? []),
           ...(profile.proposals ?? []).map((proposal) => `${proposal.topic} ${proposal.text}`),
+          ...(profile.posts ?? []).map((post) => `${post.type ?? ''} ${post.title ?? ''} ${post.body ?? ''} ${(post.tags ?? []).join(' ')}`),
         ].join(' '),
       );
 
@@ -454,6 +567,15 @@ function buildCivicChatPrompt(message, context, profiles) {
         .map((proposal) => `- ${proposal.topic}: ${proposal.text}`)
         .join('\n');
 
+      const proposalPosts = getProposalPosts(profile)
+        .map(formatPostForPrompt)
+        .join('\n');
+
+      const posts = (profile.posts ?? [])
+        .filter((post) => !isProposalPost(post))
+        .map(formatPostForPrompt)
+        .join('\n');
+
       return `
 Resultado ${index + 1}
 Nombre: ${profile.name}
@@ -463,8 +585,12 @@ Partido/coalicion: ${profile.party}
 Municipio: ${profile.municipality}
 Temas: ${(profile.topics ?? []).join(', ') || 'Sin temas'}
 Biografia: ${profile.profile || 'Sin biografia'}
-Propuestas:
+Propuestas legacy:
 ${proposals || '- Sin propuestas publicadas'}
+Propuestas actuales (posts con tipo "Propuesta"):
+${proposalPosts || '- Sin propuestas publicadas en posts'}
+Otras publicaciones:
+${posts || '- Sin otras publicaciones'}
 `;
     })
     .join('\n---\n');
@@ -485,6 +611,7 @@ ${profileText || 'No se encontraron perfiles relevantes.'}
 Reglas obligatorias:
 - Contesta solo con base en los datos encontrados.
 - Si no hay datos suficientes, dilo claramente.
+- Trata los posts con tipo "Propuesta" como propuestas publicadas.
 - No recomiendes votar por nadie.
 - No declares ganadores.
 - No digas que un candidato es mejor o peor.
@@ -539,6 +666,7 @@ async function verifyPostOwner(postId, politicianId) {
 
 async function updatePoliticianProfile(politicianId, profile) {
   validateProfile(profile);
+  const party = profile.party ? await ensureParty(profile.party) : null;
 
   const updatePayload = {
     display_name: profile.name.trim(),
@@ -547,18 +675,28 @@ async function updatePoliticianProfile(politicianId, profile) {
     official_source_url: profile.source?.trim() || null,
     updated_at: new Date().toISOString(),
   };
+  if (party) updatePayload.party_id = party.id;
 
-  const { data, error } = await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('politician_accounts')
     .update(updatePayload)
     .eq('id', politicianId)
-    .select('display_name, bio, photo_url, official_source_url, updated_at')
+    .select('id')
     .single();
 
   if (error) throw error;
 
+  const { data, error: readError } = await supabaseAdmin
+    .from('politician_accounts')
+    .select('display_name, bio, photo_url, official_source_url, updated_at, parties(name, color_hex)')
+    .eq('id', politicianId)
+    .single();
+  if (readError) throw readError;
+
   return {
     name: data.display_name,
+    party: data.parties?.name ?? profile.party,
+    partyColor: data.parties?.color_hex ?? '',
     profile: data.bio ?? '',
     photoUrl: data.photo_url ?? '',
     source: data.official_source_url ?? '',
@@ -671,6 +809,120 @@ async function ensureTopic(name) {
   return data;
 }
 
+async function ensureParty(name) {
+  const cleanName = String(name ?? '').trim();
+  if (!cleanName) throw publicError(400, 'Selecciona un partido valido.');
+
+  const catalogParty = getCatalogParty(cleanName);
+  const partyPayload = catalogParty
+    ? { name: catalogParty.name, short_name: catalogParty.shortName, color_hex: catalogParty.color, description: catalogParty.description }
+    : { name: cleanName };
+
+  return createOrUpdateParty(partyPayload);
+}
+
+async function createOrUpdateParty(party) {
+  validateParty(party);
+
+  const cleanName = String(party.name).trim();
+  const payload = {
+    name: cleanName,
+    short_name: party.shortName?.trim() || party.short_name?.trim() || null,
+    color_hex: normalizeHexColor(party.color || party.color_hex),
+    description: party.description?.trim() || null,
+  };
+
+  if (party.id) {
+    const { data, error } = await supabaseAdmin
+      .from('parties')
+      .update(payload)
+      .eq('id', party.id)
+      .select('id, name, short_name, color_hex, description')
+      .single();
+    if (error) throw error;
+    return formatParty(data);
+  }
+
+  const { data: existing, error: readError } = await supabaseAdmin
+    .from('parties')
+    .select('id')
+    .eq('name', cleanName)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  if (existing) {
+    const { data, error } = await supabaseAdmin
+      .from('parties')
+      .update(payload)
+      .eq('id', existing.id)
+      .select('id, name, short_name, color_hex, description')
+      .single();
+    if (error) throw error;
+    return formatParty(data);
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('parties')
+    .insert(payload)
+    .select('id, name, short_name, color_hex, description')
+    .single();
+  if (error) throw error;
+  return formatParty(data);
+}
+
+async function listParties(client) {
+  const { data, error } = await client.from('parties').select('id, name, short_name, color_hex, description').order('name');
+  if (!error) return (data ?? []).map(formatParty);
+  if (!isMissingColumnError(error)) throw error;
+
+  const fallback = await client.from('parties').select('id, name, short_name, color_hex').order('name');
+  if (fallback.error) throw fallback.error;
+  return (fallback.data ?? []).map(formatParty);
+}
+
+function isMissingColumnError(error) {
+  return error?.code === '42703' || String(error?.message ?? '').toLowerCase().includes('description');
+}
+
+function validateParty(party) {
+  if (!party?.name?.trim()) {
+    throw publicError(400, 'El partido necesita nombre.');
+  }
+  if (!normalizeHexColor(party.color || party.color_hex)) {
+    throw publicError(400, 'El partido necesita un color HEX valido.');
+  }
+}
+
+function verifyPartyAdmin(password) {
+  const expected = process.env.PARTY_ADMIN_PASSWORD;
+  if (!expected) {
+    throw publicError(500, 'PARTY_ADMIN_PASSWORD no esta configurada en el servidor.');
+  }
+  if (password !== expected) {
+    throw publicError(403, 'La contrasena de administracion no es correcta.');
+  }
+}
+
+function formatParty(party) {
+  return {
+    id: party.id,
+    name: party.name,
+    shortName: party.short_name ?? '',
+    color: party.color_hex ?? '#0A0A0F',
+    description: party.description ?? '',
+  };
+}
+
+function normalizeHexColor(color) {
+  const value = String(color ?? '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value.toUpperCase() : '';
+}
+
+function getCatalogParty(name) {
+  const normalized = normalizeText(name);
+  return partyCatalog.find((party) => normalizeText(party.name) === normalized || normalizeText(party.shortName) === normalized);
+}
+
 function validatePost(post) {
   if (!post?.body?.trim()) {
     throw publicError(400, 'La publicacion necesita contenido.');
@@ -715,6 +967,130 @@ function slugify(value) {
     .replace(/^-|-$/g, '');
 }
 
+function isProposalPost(post) {
+  return normalizeText(post?.type ?? post?.post_type).includes('propuesta');
+}
+
+function getProposalPosts(profile) {
+  return (profile.posts ?? []).filter(isProposalPost);
+}
+
+function formatPostForPrompt(post) {
+  const tags = (post.tags ?? []).join(', ') || 'Sin tags';
+  const title = post.title ? `${post.title}: ` : '';
+  return `- ${post.type ?? 'Publicacion'} | ${title}${post.body} | Tags: ${tags}`;
+}
+
+function buildFallbackComparison(politicians, quotaLimited = false) {
+  const note = quotaLimited
+    ? 'El asistente de IA alcanzo su limite temporal.'
+    : 'El asistente de IA no esta disponible en este momento.';
+
+  const profiles = politicians.map((politician, index) => {
+    const proposals = (politician.proposals ?? [])
+      .map((p) => `  - ${p.topic}: ${p.text}`)
+      .join('\n');
+    const proposalPosts = getProposalPosts(politician)
+      .map((p) => `  ${formatPostForPrompt(p)}`)
+      .join('\n');
+    const posts = (politician.posts ?? [])
+      .filter((p) => !isProposalPost(p))
+      .map((p) => {
+        return `  ${formatPostForPrompt(p)}`;
+      })
+      .join('\n');
+    const values = (politician.values ?? []).join(', ') || 'No declarados';
+    const topics = (politician.topics ?? []).join(', ') || 'Sin temas publicados';
+
+    return `Perfil ${index + 1}: ${politician.name}
+Cargo: ${politician.office} | Nivel: ${politician.level}
+Partido: ${politician.party} | ${politician.municipality}, ${politician.state}
+Temas: ${topics}
+Valores: ${values}
+Propuestas legacy:
+${proposals || '  - Sin propuestas en formato legacy'}
+Propuestas actuales:
+${proposalPosts || '  - Sin propuestas publicadas en posts'}
+Otras publicaciones:
+${posts || '  - Sin otras publicaciones publicadas'}`;
+  });
+
+  const p0topics = politicians[0]?.topics ?? [];
+  const p1topics = politicians[1]?.topics ?? [];
+  const shared = p0topics.filter((t) => p1topics.includes(t));
+  const onlyIn0 = p0topics.filter((t) => !p1topics.includes(t));
+  const onlyIn1 = p1topics.filter((t) => !p0topics.includes(t));
+
+  const coincidences = shared.length
+    ? `Temas en comun: ${shared.join(', ')}`
+    : 'No se encontraron temas en comun declarados.';
+
+  const differences = [
+    onlyIn0.length ? `Solo en ${politicians[0]?.name}: ${onlyIn0.join(', ')}` : '',
+    onlyIn1.length ? `Solo en ${politicians[1]?.name}: ${onlyIn1.join(', ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n') || 'No hay suficiente informacion para comparar temas distintos.';
+
+  return `${note} Aqui esta la comparacion estructurada con los datos disponibles:
+
+${profiles.join('\n\n---\n\n')}
+
+---
+
+Coincidencias:
+${coincidences}
+
+Diferencias de temas:
+${differences}
+
+Nota: Esta comparacion muestra los datos directamente de los perfiles sin analisis generativo.`;
+}
+
+function buildFallbackSummary(politician, quotaLimited = false) {
+  const note = quotaLimited
+    ? 'El asistente de IA alcanzo su limite temporal.'
+    : 'El asistente de IA no esta disponible en este momento.';
+
+  const proposals = (politician.proposals ?? [])
+    .map((p) => `  - ${p.topic}: ${p.text}`)
+    .join('\n');
+
+  const proposalPosts = getProposalPosts(politician)
+    .map((post) => `  ${formatPostForPrompt(post)}`)
+    .join('\n');
+
+  const posts = (politician.posts ?? [])
+    .filter((post) => !isProposalPost(post))
+    .slice(0, 3)
+    .map((post) => {
+      return `  ${formatPostForPrompt(post)}`;
+    })
+    .join('\n');
+
+  const values = (politician.values ?? []).join(', ') || 'No declarados';
+  const topics = (politician.topics ?? []).join(', ') || 'Sin temas publicados';
+
+  return `${note} Aqui esta la informacion disponible del perfil:
+
+${politician.name}
+${politician.office} | ${politician.level} | ${politician.party}
+${politician.municipality}, ${politician.state}
+
+Temas que aborda: ${topics}
+
+Valores declarados: ${values}
+
+Biografia: ${politician.profile || 'Sin biografia publicada.'}
+
+Propuestas:
+${proposals || '  - Sin propuestas publicadas'}
+${proposalPosts ? `\nPropuestas publicadas como posts:\n${proposalPosts}` : ''}
+${posts ? `\nOtras publicaciones recientes:\n${posts}` : ''}
+
+Nota: Este resumen muestra los datos del perfil directamente sin analisis generativo.`;
+}
+
 function buildDatabaseFallbackAnswer(message, profiles, quotaLimited = false) {
   if (!profiles.length) {
     return quotaLimited
@@ -732,8 +1108,16 @@ function buildDatabaseFallbackAnswer(message, profiles, quotaLimited = false) {
       .slice(0, 2)
       .map((proposal) => `${proposal.topic}: ${proposal.text}`)
       .join(' ');
+    const proposalPosts = getProposalPosts(profile)
+      .slice(0, 2)
+      .map((post) => {
+        const tags = (post.tags ?? []).join(', ');
+        const title = post.title ? `${post.title}: ` : '';
+        return `${tags ? `${tags}: ` : ''}${title}${post.body}`;
+      })
+      .join(' ');
 
-    return `- ${profile.name} | ${profile.office} | ${profile.municipality}. Temas: ${topics}.${proposals ? ` Propuestas: ${proposals}` : ''}`;
+    return `- ${profile.name} | ${profile.office} | ${profile.municipality}. Temas: ${topics}.${proposals || proposalPosts ? ` Propuestas: ${[proposals, proposalPosts].filter(Boolean).join(' ')}` : ''}`;
   });
 
   return `${intro}\n\n${lines.join('\n')}\n\nEsta respuesta usa busqueda directa, no analisis generativo.`;
